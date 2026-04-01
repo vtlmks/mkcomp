@@ -1,0 +1,136 @@
+// [=]===^=[ update_active_window ]=========================[=]
+static void update_active_window(void) {
+	Atom type;
+	int format;
+	unsigned long nitems, bytes_after;
+	unsigned char *data = NULL;
+
+	XGetWindowProperty(comp.dpy, comp.root, comp.atom_active_win,
+		0, 1, False, XA_WINDOW, &type, &format, &nitems, &bytes_after, &data);
+
+	if(!data) {
+		comp.active_win = 0;
+		return;
+	}
+
+	Window active = 0;
+	if(nitems == 1 && format == 32) {
+		active = *(Window *)data;
+	}
+	XFree(data);
+
+	if(find_win(active)) {
+		comp.active_win = active;
+		return;
+	}
+
+	Window current = active;
+	Window root_ret, parent;
+	Window *ch;
+	uint32_t nch;
+
+	while(current && current != comp.root) {
+		if(!XQueryTree(comp.dpy, current, &root_ret, &parent, &ch, &nch)) {
+			break;
+		}
+		if(ch) {
+			XFree(ch);
+		}
+		if(parent == comp.root) {
+			comp.active_win = current;
+			return;
+		}
+		current = parent;
+	}
+
+	comp.active_win = 0;
+}
+
+// [=]===^=[ handle_destroy ]================================[=]
+static void handle_destroy(XDestroyWindowEvent *ev) {
+	remove_win(ev->window);
+}
+
+// [=]===^=[ handle_map ]====================================[=]
+static void handle_map(XMapEvent *ev) {
+	add_win(ev->window);
+}
+
+// [=]===^=[ handle_unmap ]==================================[=]
+static void handle_unmap(XUnmapEvent *ev) {
+	remove_win(ev->window);
+}
+
+// [=]===^=[ handle_reparent ]===============================[=]
+static void handle_reparent(XReparentEvent *ev) {
+	if(ev->parent == comp.root) {
+		add_win(ev->window);
+
+	} else {
+		remove_win(ev->window);
+	}
+}
+
+// [=]===^=[ handle_configure ]==============================[=]
+static void handle_configure(XConfigureEvent *ev) {
+	struct win *w = find_win(ev->window);
+	if(!w) {
+		return;
+	}
+
+	uint32_t new_w = ev->width + 2 * ev->border_width;
+	uint32_t new_h = ev->height + 2 * ev->border_width;
+	uint8_t resized = (w->w != new_w || w->h != new_h);
+
+	w->x = ev->x;
+	w->y = ev->y;
+	w->w = new_w;
+	w->h = new_h;
+
+	if(resized) {
+		unbind_texture(w);
+		w->needs_rebind = 1;
+	}
+}
+
+// [=]===^=[ handle_damage_event ]===========================[=]
+static void handle_damage_event(XDamageNotifyEvent *ev) {
+	struct win *w = find_win(ev->drawable);
+	if(!w) {
+		return;
+	}
+	w->damaged = 1;
+	XDamageSubtract(comp.dpy, w->damage, None, None);
+}
+
+// [=]===^=[ handle_property ]===============================[=]
+static void handle_property(XPropertyEvent *ev) {
+	if(ev->atom == comp.atom_active_win) {
+		update_active_window();
+	}
+}
+
+// [=]===^=[ handle_event ]==================================[=]
+static void handle_event(XEvent *ev) {
+	if(ev->type == DestroyNotify) {
+		handle_destroy(&ev->xdestroywindow);
+
+	} else if(ev->type == MapNotify) {
+		handle_map(&ev->xmap);
+
+	} else if(ev->type == UnmapNotify) {
+		handle_unmap(&ev->xunmap);
+
+	} else if(ev->type == ReparentNotify) {
+		handle_reparent(&ev->xreparent);
+
+	} else if(ev->type == ConfigureNotify) {
+		handle_configure(&ev->xconfigure);
+
+	} else if(ev->type == PropertyNotify) {
+		handle_property(&ev->xproperty);
+
+	} else if(ev->type == comp.damage_event + XDamageNotify) {
+		handle_damage_event((XDamageNotifyEvent *)ev);
+	}
+}
