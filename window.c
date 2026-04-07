@@ -74,6 +74,64 @@ static void bind_texture(struct win *w) {
 	w->damaged = 0;
 }
 
+// [=]===^=[ unbind_root_pixmap ]===========================[=]
+static void unbind_root_pixmap(void) {
+	if(comp.root_bg_glx_pixmap) {
+		glBindTexture(GL_TEXTURE_2D, comp.root_bg_tex);
+		comp.release_tex_image(comp.dpy, comp.root_bg_glx_pixmap, GLX_FRONT_LEFT_EXT);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glXDestroyPixmap(comp.dpy, comp.root_bg_glx_pixmap);
+		comp.root_bg_glx_pixmap = 0;
+	}
+	comp.root_bg_pixmap = 0;
+}
+
+// [=]===^=[ bind_root_pixmap ]=============================[=]
+static void bind_root_pixmap(void) {
+	unbind_root_pixmap();
+
+	Atom type;
+	int format;
+	unsigned long nitems, bytes_after;
+	unsigned char *data = NULL;
+
+	XGetWindowProperty(comp.dpy, comp.root, comp.atom_root_pixmap, 0, 1, False, XA_PIXMAP, &type, &format, &nitems, &bytes_after, &data);
+	if(!data || nitems != 1 || format != 32) {
+		if(data) {
+			XFree(data);
+		}
+		return;
+	}
+	comp.root_bg_pixmap = *(Pixmap *)data;
+	XFree(data);
+
+	if(!comp.tex_fbconfig_rgb) {
+		return;
+	}
+
+	int32_t pixmap_attrs[] = {
+		GLX_TEXTURE_TARGET_EXT, GLX_TEXTURE_2D_EXT,
+		GLX_TEXTURE_FORMAT_EXT, GLX_TEXTURE_FORMAT_RGB_EXT,
+		None
+	};
+	comp.root_bg_glx_pixmap = glXCreatePixmap(comp.dpy, comp.tex_fbconfig_rgb, comp.root_bg_pixmap, pixmap_attrs);
+	if(!comp.root_bg_glx_pixmap) {
+		comp.root_bg_pixmap = 0;
+		return;
+	}
+
+	if(!comp.root_bg_tex) {
+		glGenTextures(1, &comp.root_bg_tex);
+	}
+	glBindTexture(GL_TEXTURE_2D, comp.root_bg_tex);
+	comp.bind_tex_image(comp.dpy, comp.root_bg_glx_pixmap, GLX_FRONT_LEFT_EXT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 // [=]===^=[ read_wm_opacity ]==============================[=]
 static float read_wm_opacity(Window id) {
 	Atom type;

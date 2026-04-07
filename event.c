@@ -140,6 +140,11 @@ static void handle_property(XPropertyEvent *ev) {
 		return;
 	}
 
+	if(ev->window == comp.root && ev->atom == comp.atom_root_pixmap) {
+		bind_root_pixmap();
+		return;
+	}
+
 	if(ev->atom == comp.atom_wm_state) {
 		struct win *w = find_win(ev->window);
 		if(!w) {

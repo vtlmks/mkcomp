@@ -154,6 +154,10 @@ struct compositor {
 	Atom atom_state_fullscreen;
 	Atom atom_state_attention;
 	Atom atom_wm_opacity;
+	Atom atom_root_pixmap;
+	Pixmap root_bg_pixmap;
+	GLXPixmap root_bg_glx_pixmap;
+	uint32_t root_bg_tex;
 	float bg_color[3];
 	float bg_intensity;
 	float bg_speed;
@@ -306,15 +310,15 @@ static void run(void) {
 
 		if(comp.has_present) {
 			if(need_frame && comp.vblank_ready) {
-				render();
 				comp.dirty = 0;
+				render();
 				comp.vblank_ready = 0;
 			}
 
 		} else {
 			if(need_frame) {
-				render();
 				comp.dirty = 0;
+				render();
 			}
 		}
 	}
@@ -332,6 +336,11 @@ static void cleanup(void) {
 		}
 	}
 	comp.win_count = 0;
+
+	unbind_root_pixmap();
+	if(comp.root_bg_tex) {
+		glDeleteTextures(1, &comp.root_bg_tex);
+	}
 
 	if(comp.has_present) {
 		XPresentFreeInput(comp.dpy, comp.root, comp.present_eid);
@@ -444,6 +453,7 @@ int main(int32_t argc, char **argv) {
 	comp.atom_state_fullscreen = XInternAtom(comp.dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	comp.atom_state_attention = XInternAtom(comp.dpy, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
 	comp.atom_wm_opacity = XInternAtom(comp.dpy, "_NET_WM_WINDOW_OPACITY", False);
+	comp.atom_root_pixmap = XInternAtom(comp.dpy, "_XROOTPMAP_ID", False);
 
 	XSelectInput(comp.dpy, comp.root, SubstructureNotifyMask | PropertyChangeMask);
 	XSetErrorHandler(runtime_error_handler);
@@ -453,6 +463,7 @@ int main(int32_t argc, char **argv) {
 	signal(SIGHUP, signal_handler);
 
 	register_windows();
+	bind_root_pixmap();
 	update_active_window();
 	run();
 	cleanup();

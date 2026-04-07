@@ -111,7 +111,7 @@ static void render(void) {
 
 	glXWaitX();
 
-	if(comp.bg_prog) {
+	if(comp.bg_prog && comp.bg_intensity > 0.0f) {
 		float t = (float)(get_time_us() - comp.start_us) / 1000000.0f;
 		glUseProgram(comp.bg_prog);
 		glUniform1f(comp.bg_time_loc, t);
@@ -132,6 +132,39 @@ static void render(void) {
 		glVertex2f(-1.0f, 1.0f);
 		glEnd();
 
+		glUseProgram(0);
+
+	} else if(comp.root_bg_tex) {
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, comp.root_w, comp.root_h, 0, -1, 1);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glUseProgram(comp.win_prog);
+		if(comp.win_prog) {
+			glUniform2f(comp.win_pos_loc, 0.0f, 0.0f);
+			glUniform2f(comp.win_size_loc, (float)comp.root_w, (float)comp.root_h);
+			glUniform1f(comp.win_radius_loc, 0.0f);
+			glUniform1f(comp.win_dim_loc, 1.0f);
+			glUniform1f(comp.win_opacity_loc, 1.0f);
+		}
+
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, comp.root_bg_tex);
+
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 0.0f);
+		glVertex2f(0.0f, 0.0f);
+		glTexCoord2f(1.0f, 0.0f);
+		glVertex2f((float)comp.root_w, 0.0f);
+		glTexCoord2f(1.0f, 1.0f);
+		glVertex2f((float)comp.root_w, (float)comp.root_h);
+		glTexCoord2f(0.0f, 1.0f);
+		glVertex2f(0.0f, (float)comp.root_h);
+		glEnd();
+
+		glDisable(GL_TEXTURE_2D);
 		glUseProgram(0);
 
 	} else {
