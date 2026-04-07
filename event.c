@@ -157,25 +157,38 @@ static void handle_property(XPropertyEvent *ev) {
 
 // [=]===^=[ handle_event ]==================================[=]
 static void handle_event(XEvent *ev) {
+	uint8_t handled = 0;
+
 	if(ev->type == DestroyNotify) {
 		handle_destroy(&ev->xdestroywindow);
+		handled = 1;
 
 	} else if(ev->type == MapNotify) {
 		handle_map(&ev->xmap);
+		handled = 1;
 
 	} else if(ev->type == UnmapNotify) {
 		handle_unmap(&ev->xunmap);
+		handled = 1;
 
 	} else if(ev->type == ReparentNotify) {
 		handle_reparent(&ev->xreparent);
+		handled = 1;
 
 	} else if(ev->type == ConfigureNotify) {
 		handle_configure(&ev->xconfigure);
+		handled = 1;
 
 	} else if(ev->type == PropertyNotify) {
 		handle_property(&ev->xproperty);
+		handled = 1;
 
 	} else if(ev->type == comp.damage_event + XDamageNotify) {
 		handle_damage_event((XDamageNotifyEvent *)ev);
+		handled = 1;
+	}
+
+	if(handled) {
+		comp.dirty = 1;
 	}
 }

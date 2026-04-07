@@ -132,6 +132,7 @@ struct compositor {
 	uint32_t win_count;
 	int32_t inotify_fd;
 	uint8_t running;
+	uint8_t dirty;
 };
 
 static struct compositor comp;
@@ -175,20 +176,23 @@ static void signal_handler(int32_t sig) {
 // [=]===^=[ run ]===========================================[=]
 static void run(void) {
 	comp.running = 1;
+	comp.dirty = 1;
 	int32_t xfd = ConnectionNumber(comp.dpy);
 
+	struct pollfd fds[2];
+	uint32_t nfds = 0;
+	fds[nfds].fd = xfd;
+	fds[nfds].events = POLLIN;
+	++nfds;
+	if(comp.inotify_fd >= 0) {
+		fds[nfds].fd = comp.inotify_fd;
+		fds[nfds].events = POLLIN;
+		++nfds;
+	}
+
 	while(comp.running) {
-		if(comp.fullscreen_win && !XPending(comp.dpy)) {
-			struct pollfd fds[2];
-			uint32_t nfds = 0;
-			fds[nfds].fd = xfd;
-			fds[nfds].events = POLLIN;
-			++nfds;
-			if(comp.inotify_fd >= 0) {
-				fds[nfds].fd = comp.inotify_fd;
-				fds[nfds].events = POLLIN;
-				++nfds;
-			}
+		uint8_t bg_animated = (!comp.fullscreen_win && comp.bg_prog && comp.bg_intensity > 0.0f && comp.bg_speed > 0.0f);
+		if(!comp.dirty && !bg_animated && !XPending(comp.dpy)) {
 			poll(fds, nfds, -1);
 		}
 
@@ -201,6 +205,7 @@ static void run(void) {
 		if(reload_config) {
 			load_config();
 			reload_config = 0;
+			comp.dirty = 1;
 			fprintf(stderr, "mkcomp: config reloaded (signal)\n");
 		}
 
@@ -208,12 +213,16 @@ static void run(void) {
 			char inbuf[256];
 			if(read(comp.inotify_fd, inbuf, sizeof(inbuf)) > 0) {
 				load_config();
+				comp.dirty = 1;
 				fprintf(stderr, "mkcomp: config reloaded\n");
 			}
 		}
 
 		XFlush(comp.dpy);
-		render();
+		if(comp.dirty || bg_animated) {
+			render();
+			comp.dirty = 0;
+		}
 	}
 }
 

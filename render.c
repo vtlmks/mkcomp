@@ -143,6 +143,9 @@ static void render(void) {
 		} else {
 			w->dim_current = target_dim;
 		}
+		if(w->dim_current != target_dim) {
+			comp.dirty = 1;
+		}
 
 		glUseProgram(comp.win_prog);
 		if(comp.win_prog) {
