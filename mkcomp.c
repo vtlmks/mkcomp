@@ -21,6 +21,7 @@
 #include <X11/extensions/Xdamage.h>
 #include <X11/extensions/Xfixes.h>
 #include <X11/extensions/shape.h>
+#include <X11/extensions/Xpresent.h>
 #include <GL/gl.h>
 #include <GL/glx.h>
 
@@ -42,6 +43,7 @@
 
 typedef void (*glx_bind_tex_image_func)(Display *, GLXDrawable, int, int *);
 typedef void (*glx_release_tex_image_func)(Display *, GLXDrawable, int);
+typedef void (*glx_swap_interval_ext_func)(Display *, GLXDrawable, int);
 
 struct win {
 	Window id;
@@ -130,9 +132,16 @@ struct compositor {
 	uint64_t last_render_us;
 	struct win wins[MAX_WINDOWS];
 	uint32_t win_count;
+	int32_t present_opcode;
+	XID present_eid;
+	uint32_t present_serial;
+	uint64_t last_msc;
 	int32_t inotify_fd;
 	uint8_t running;
 	uint8_t dirty;
+	uint8_t has_present;
+	uint8_t vblank_pending;
+	uint8_t vblank_ready;
 };
 
 static struct compositor comp;
@@ -173,6 +182,19 @@ static void signal_handler(int32_t sig) {
 #include "event.c"
 #include "init.c"
 
+// [=]===^=[ schedule_vblank ]===============================[=]
+static void schedule_vblank(void) {
+	if(comp.vblank_pending) {
+		return;
+	}
+	if(comp.last_msc) {
+		XPresentNotifyMSC(comp.dpy, comp.root, ++comp.present_serial, comp.last_msc + 1, 0, 0);
+	} else {
+		XPresentNotifyMSC(comp.dpy, comp.root, ++comp.present_serial, 0, 1, 0);
+	}
+	comp.vblank_pending = 1;
+}
+
 // [=]===^=[ run ]===========================================[=]
 static void run(void) {
 	comp.running = 1;
@@ -192,8 +214,17 @@ static void run(void) {
 
 	while(comp.running) {
 		uint8_t bg_animated = (!comp.fullscreen_win && comp.bg_prog && comp.bg_intensity > 0.0f && comp.bg_speed > 0.0f);
-		if(!comp.dirty && !bg_animated && !XPending(comp.dpy)) {
-			poll(fds, nfds, -1);
+		uint8_t need_frame = (comp.dirty || bg_animated) && !comp.fullscreen_win;
+
+		if(comp.has_present && need_frame) {
+			schedule_vblank();
+		}
+
+		if(!XPending(comp.dpy)) {
+			if(comp.has_present || !need_frame) {
+				XFlush(comp.dpy);
+				poll(fds, nfds, -1);
+			}
 		}
 
 		while(XPending(comp.dpy)) {
@@ -219,9 +250,22 @@ static void run(void) {
 		}
 
 		XFlush(comp.dpy);
-		if(comp.dirty || bg_animated) {
-			render();
-			comp.dirty = 0;
+
+		bg_animated = (!comp.fullscreen_win && comp.bg_prog && comp.bg_intensity > 0.0f && comp.bg_speed > 0.0f);
+		need_frame = (comp.dirty || bg_animated) && !comp.fullscreen_win;
+
+		if(comp.has_present) {
+			if(need_frame && comp.vblank_ready) {
+				render();
+				comp.dirty = 0;
+				comp.vblank_ready = 0;
+			}
+
+		} else {
+			if(need_frame) {
+				render();
+				comp.dirty = 0;
+			}
 		}
 	}
 }
@@ -238,6 +282,10 @@ static void cleanup(void) {
 		}
 	}
 	comp.win_count = 0;
+
+	if(comp.has_present) {
+		XPresentFreeInput(comp.dpy, comp.root, comp.present_eid);
+	}
 
 	if(comp.bg_prog) {
 		glDeleteProgram(comp.bg_prog);

@@ -188,6 +188,17 @@ static uint8_t init_glx(void) {
 
 	init_shaders();
 
+	int32_t present_event, present_error;
+	if(XPresentQueryExtension(comp.dpy, &comp.present_opcode, &present_event, &present_error)) {
+		glx_swap_interval_ext_func swap_interval = (glx_swap_interval_ext_func)glXGetProcAddress((GLubyte *)"glXSwapIntervalEXT");
+		if(swap_interval) {
+			comp.present_eid = XPresentSelectInput(comp.dpy, comp.root, PresentCompleteNotifyMask);
+			swap_interval(comp.dpy, comp.gl_win, 0);
+			comp.has_present = 1;
+			fprintf(stderr, "mkcomp: vblank-driven rendering via Present extension\n");
+		}
+	}
+
 	return 1;
 }
 

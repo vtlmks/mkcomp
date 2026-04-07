@@ -160,6 +160,20 @@ static void handle_property(XPropertyEvent *ev) {
 
 // [=]===^=[ handle_event ]==================================[=]
 static void handle_event(XEvent *ev) {
+	if(ev->type == GenericEvent && comp.has_present) {
+		XGenericEventCookie *cookie = &ev->xcookie;
+		if(cookie->extension == comp.present_opcode && XGetEventData(comp.dpy, cookie)) {
+			if(cookie->evtype == PresentCompleteNotify) {
+				XPresentCompleteNotifyEvent *ce = cookie->data;
+				comp.last_msc = ce->msc;
+				comp.vblank_pending = 0;
+				comp.vblank_ready = 1;
+			}
+			XFreeEventData(comp.dpy, cookie);
+		}
+		return;
+	}
+
 	uint8_t handled = 0;
 
 	if(ev->type == DestroyNotify) {
