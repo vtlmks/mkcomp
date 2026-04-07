@@ -15,6 +15,7 @@ static void load_config(void) {
 	comp.border_width = 3.0f;
 	comp.corner_radius = 12.0f;
 	comp.dim_inactive = 0.2f;
+	comp.focus_transition_ms = 200;
 
 	char *home = getenv("HOME");
 	if(!home) {
@@ -90,6 +91,9 @@ static void load_config(void) {
 
 		} else if(strcmp(key, "dim_inactive") == 0) {
 			comp.dim_inactive = strtof(val, NULL);
+
+		} else if(strcmp(key, "focus_transition_ms") == 0) {
+			comp.focus_transition_ms = (uint32_t)strtoul(val, NULL, 10);
 		}
 	}
 

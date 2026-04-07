@@ -7,8 +7,19 @@ static uint64_t get_time_us(void) {
 
 // [=]===^=[ render ]========================================[=]
 static void render(void) {
+	if(comp.fullscreen_win) {
+		return;
+	}
+
+	uint64_t now = get_time_us();
+	float dt = comp.last_render_us ? (float)(now - comp.last_render_us) / 1000000.0f : 0.0f;
+	comp.last_render_us = now;
+
 	for(uint32_t i = 0; i < comp.win_count; ++i) {
 		struct win *w = &comp.wins[i];
+		if(!w->mapped) {
+			continue;
+		}
 		if(w->needs_rebind) {
 			bind_texture(w);
 			w->needs_rebind = 0;
@@ -57,12 +68,9 @@ static void render(void) {
 	uint32_t nchildren = 0;
 	XQueryTree(comp.dpy, comp.root, &root_ret, &parent_ret, &children, &nchildren);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
 	for(uint32_t i = 0; i < nchildren; ++i) {
 		struct win *w = find_win(children[i]);
-		if(!w || !w->tex) {
+		if(!w || !w->mapped || !w->tex) {
 			continue;
 		}
 
@@ -71,6 +79,9 @@ static void render(void) {
 		float ww = (float)w->w;
 		float wh = (float)w->h;
 		uint8_t active = (w->id == comp.active_win);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 		if(comp.shadow_prog && comp.shadow_radius > 0.0f && !w->no_effects) {
 			float ox = comp.shadow_offset_x;
@@ -109,14 +120,40 @@ static void render(void) {
 			glEnd();
 		}
 
+		float radius = w->no_effects ? 0.0f : comp.corner_radius;
+
+		float target_dim = (active || w->no_effects) ? 1.0f : (1.0f - comp.dim_inactive);
+		if(comp.focus_transition_ms > 0 && dt > 0.0f && comp.dim_inactive > 0.0f) {
+			float rate = comp.dim_inactive / ((float)comp.focus_transition_ms / 1000.0f);
+			float step = rate * dt;
+			if(w->dim_current < target_dim) {
+				w->dim_current += step;
+				if(w->dim_current > target_dim) {
+					w->dim_current = target_dim;
+				}
+
+			} else if(w->dim_current > target_dim) {
+				w->dim_current -= step;
+				if(w->dim_current < target_dim) {
+					w->dim_current = target_dim;
+				}
+			}
+
+		} else {
+			w->dim_current = target_dim;
+		}
+
 		glUseProgram(comp.win_prog);
 		if(comp.win_prog) {
-			float dim = (active || w->no_effects) ? 1.0f : (1.0f - comp.dim_inactive);
-			float radius = w->no_effects ? 0.0f : comp.corner_radius;
 			glUniform2f(comp.win_pos_loc, wx, wy);
 			glUniform2f(comp.win_size_loc, ww, wh);
 			glUniform1f(comp.win_radius_loc, radius);
-			glUniform1f(comp.win_dim_loc, dim);
+			glUniform1f(comp.win_dim_loc, w->dim_current);
+		}
+
+		uint8_t needs_blend = (w->depth == 32 || radius > 0.0f);
+		if(!needs_blend) {
+			glDisable(GL_BLEND);
 		}
 
 		glEnable(GL_TEXTURE_2D);
@@ -134,10 +171,10 @@ static void render(void) {
 		glEnd();
 
 		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_BLEND);
 	}
 
 	glUseProgram(0);
-	glDisable(GL_BLEND);
 
 	if(children) {
 		XFree(children);

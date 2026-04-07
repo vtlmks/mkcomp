@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/inotify.h>
+#include <poll.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -53,9 +54,12 @@ struct win {
 	uint32_t w;
 	uint32_t h;
 	uint32_t depth;
+	float dim_current;
 	uint8_t damaged;
 	uint8_t needs_rebind;
 	uint8_t no_effects;
+	uint8_t fullscreen;
+	uint8_t mapped;
 };
 
 struct compositor {
@@ -96,10 +100,18 @@ struct compositor {
 	int32_t border_radius_loc;
 	int32_t border_color_loc;
 	Window active_win;
+	Window fullscreen_win;
 	Atom atom_active_win;
 	Atom atom_wm_type;
 	Atom atom_type_dock;
 	Atom atom_type_desktop;
+	Atom atom_type_menu;
+	Atom atom_type_popup_menu;
+	Atom atom_type_dropdown_menu;
+	Atom atom_type_tooltip;
+	Atom atom_type_combo;
+	Atom atom_wm_state;
+	Atom atom_state_fullscreen;
 	float bg_color[3];
 	float bg_intensity;
 	float bg_speed;
@@ -111,6 +123,8 @@ struct compositor {
 	float border_width;
 	float corner_radius;
 	float dim_inactive;
+	uint32_t focus_transition_ms;
+	uint64_t last_render_us;
 	struct win wins[MAX_WINDOWS];
 	uint32_t win_count;
 	int32_t inotify_fd;
@@ -158,8 +172,23 @@ static void signal_handler(int32_t sig) {
 // [=]===^=[ run ]===========================================[=]
 static void run(void) {
 	comp.running = 1;
+	int32_t xfd = ConnectionNumber(comp.dpy);
 
 	while(comp.running) {
+		if(comp.fullscreen_win && !XPending(comp.dpy)) {
+			struct pollfd fds[2];
+			uint32_t nfds = 0;
+			fds[nfds].fd = xfd;
+			fds[nfds].events = POLLIN;
+			++nfds;
+			if(comp.inotify_fd >= 0) {
+				fds[nfds].fd = comp.inotify_fd;
+				fds[nfds].events = POLLIN;
+				++nfds;
+			}
+			poll(fds, nfds, -1);
+		}
+
 		while(XPending(comp.dpy)) {
 			XEvent ev;
 			XNextEvent(comp.dpy, &ev);
@@ -279,6 +308,13 @@ int main(int32_t argc, char **argv) {
 	comp.atom_wm_type = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE", False);
 	comp.atom_type_dock = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_DOCK", False);
 	comp.atom_type_desktop = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
+	comp.atom_type_menu = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
+	comp.atom_type_popup_menu = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
+	comp.atom_type_dropdown_menu = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", False);
+	comp.atom_type_tooltip = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
+	comp.atom_type_combo = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_COMBO", False);
+	comp.atom_wm_state = XInternAtom(comp.dpy, "_NET_WM_STATE", False);
+	comp.atom_state_fullscreen = XInternAtom(comp.dpy, "_NET_WM_STATE_FULLSCREEN", False);
 
 	XSelectInput(comp.dpy, comp.root, SubstructureNotifyMask | PropertyChangeMask);
 	XSetErrorHandler(runtime_error_handler);

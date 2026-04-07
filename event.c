@@ -53,12 +53,23 @@ static void handle_destroy(XDestroyWindowEvent *ev) {
 
 // [=]===^=[ handle_map ]====================================[=]
 static void handle_map(XMapEvent *ev) {
-	add_win(ev->window);
+	struct win *w = find_win(ev->window);
+	if(w) {
+		w->mapped = 1;
+		unbind_texture(w);
+		w->needs_rebind = 1;
+
+	} else {
+		add_win(ev->window);
+	}
 }
 
 // [=]===^=[ handle_unmap ]==================================[=]
 static void handle_unmap(XUnmapEvent *ev) {
-	remove_win(ev->window);
+	struct win *w = find_win(ev->window);
+	if(w) {
+		w->mapped = 0;
+	}
 }
 
 // [=]===^=[ handle_reparent ]===============================[=]
@@ -105,8 +116,34 @@ static void handle_damage_event(XDamageNotifyEvent *ev) {
 
 // [=]===^=[ handle_property ]===============================[=]
 static void handle_property(XPropertyEvent *ev) {
-	if(ev->atom == comp.atom_active_win) {
+	if(ev->window == comp.root && ev->atom == comp.atom_active_win) {
 		update_active_window();
+		return;
+	}
+
+	if(ev->atom == comp.atom_wm_state) {
+		struct win *w = find_win(ev->window);
+		if(!w) {
+			Window root_ret, parent;
+			Window *ch = NULL;
+			uint32_t nch = 0;
+			if(XQueryTree(comp.dpy, ev->window, &root_ret, &parent, &ch, &nch)) {
+				if(ch) {
+					XFree(ch);
+				}
+				w = find_win(parent);
+			}
+		}
+		if(!w) {
+			return;
+		}
+		uint8_t fs = check_fullscreen(ev->window);
+		if(fs && !w->fullscreen) {
+			unredirect_fullscreen(w);
+
+		} else if(!fs && w->fullscreen) {
+			redirect_from_fullscreen(w);
+		}
 	}
 }
 
