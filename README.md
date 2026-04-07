@@ -62,7 +62,7 @@ Create `~/.config/mkcomp/mkcomp.conf` with key-value pairs. Lines starting with 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `bg_color` | `1.0 1.0 1.0` | Background color (R G B, 0.0-1.0) |
-| `bg_intensity` | `0.15` | Perlin noise intensity (0 = use wallpaper) |
+| `bg_intensity` | `0` | Perlin noise intensity (0 = use wallpaper) |
 | `bg_speed` | `1.0` | Animation speed (0 = static) |
 
 When `bg_intensity` is 0, mkcomp shows your wallpaper by reading the root window pixmap (`_XROOTPMAP_ID`). This works with wallpaper setters like `feh`, `nitrogen`, and `hsetroot`. The wallpaper updates automatically when changed.

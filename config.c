@@ -6,7 +6,7 @@ static void load_config(void) {
 	comp.bg_color[0] = 1.0f;
 	comp.bg_color[1] = 1.0f;
 	comp.bg_color[2] = 1.0f;
-	comp.bg_intensity = 0.15f;
+	comp.bg_intensity = 0.0f;
 	comp.bg_speed = 1.0f;
 	comp.shadow_radius = 20.0f;
 	comp.shadow_opacity = 0.6f;
