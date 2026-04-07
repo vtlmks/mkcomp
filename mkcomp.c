@@ -26,6 +26,7 @@
 #include <GL/glx.h>
 
 #define MAX_WINDOWS 4096
+#define MAX_RULES 64
 
 #ifndef GLX_TEXTURE_2D_EXT
 #define GLX_TEXTURE_2D_EXT              0x20dc
@@ -57,12 +58,26 @@ struct win {
 	uint32_t h;
 	uint32_t depth;
 	float dim_current;
+	float fade;
+	float opacity;
+	float rule_opacity;
+	float rule_corner_radius;
+	int8_t rule_shadow;
 	uint8_t damaged;
 	uint8_t needs_rebind;
 	uint8_t no_effects;
 	uint8_t fullscreen;
 	uint8_t mapped;
 	uint8_t urgent;
+	uint8_t fading_out;
+	char wm_class[128];
+};
+
+struct rule {
+	char wm_class[128];
+	float opacity;
+	float corner_radius;
+	int8_t shadow;
 };
 
 struct compositor {
@@ -91,6 +106,7 @@ struct compositor {
 	int32_t win_size_loc;
 	int32_t win_radius_loc;
 	int32_t win_dim_loc;
+	int32_t win_opacity_loc;
 	uint32_t shadow_prog;
 	int32_t shadow_pos_loc;
 	int32_t shadow_size_loc;
@@ -101,7 +117,9 @@ struct compositor {
 	int32_t border_pos_loc;
 	int32_t border_size_loc;
 	int32_t border_radius_loc;
+	int32_t border_width_loc;
 	int32_t border_color_loc;
+	int32_t border_opacity_loc;
 	Window active_win;
 	Window fullscreen_win;
 	Atom atom_active_win;
@@ -116,6 +134,7 @@ struct compositor {
 	Atom atom_wm_state;
 	Atom atom_state_fullscreen;
 	Atom atom_state_attention;
+	Atom atom_wm_opacity;
 	float bg_color[3];
 	float bg_intensity;
 	float bg_speed;
@@ -127,9 +146,13 @@ struct compositor {
 	float urgent_border_color[3];
 	float border_width;
 	float corner_radius;
-	float dim_inactive;
+	float inactive_brightness;
 	uint32_t focus_transition_ms;
+	uint32_t fade_in_ms;
+	uint32_t fade_out_ms;
 	uint64_t last_render_us;
+	struct rule rules[MAX_RULES];
+	uint32_t rule_count;
 	struct win wins[MAX_WINDOWS];
 	uint32_t win_count;
 	int32_t present_opcode;
@@ -376,6 +399,7 @@ int main(int32_t argc, char **argv) {
 	comp.atom_wm_state = XInternAtom(comp.dpy, "_NET_WM_STATE", False);
 	comp.atom_state_fullscreen = XInternAtom(comp.dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	comp.atom_state_attention = XInternAtom(comp.dpy, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
+	comp.atom_wm_opacity = XInternAtom(comp.dpy, "_NET_WM_WINDOW_OPACITY", False);
 
 	XSelectInput(comp.dpy, comp.root, SubstructureNotifyMask | PropertyChangeMask);
 	XSetErrorHandler(runtime_error_handler);

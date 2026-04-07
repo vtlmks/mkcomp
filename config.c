@@ -20,8 +20,11 @@ static void load_config(void) {
 	comp.urgent_border_color[2] = 0.55f;
 	comp.border_width = 3.0f;
 	comp.corner_radius = 12.0f;
-	comp.dim_inactive = 0.2f;
-	comp.focus_transition_ms = 200;
+	comp.inactive_brightness = 1.0f;
+	comp.focus_transition_ms = 0;
+	comp.fade_in_ms = 0;
+	comp.fade_out_ms = 0;
+	comp.rule_count = 0;
 
 	char *home = getenv("HOME");
 	if(!home) {
@@ -98,11 +101,72 @@ static void load_config(void) {
 		} else if(strcmp(key, "corner_radius") == 0) {
 			comp.corner_radius = strtof(val, NULL);
 
-		} else if(strcmp(key, "dim_inactive") == 0) {
-			comp.dim_inactive = strtof(val, NULL);
+		} else if(strcmp(key, "inactive_brightness") == 0) {
+			comp.inactive_brightness = strtof(val, NULL);
 
 		} else if(strcmp(key, "focus_transition_ms") == 0) {
 			comp.focus_transition_ms = (uint32_t)strtoul(val, NULL, 10);
+
+		} else if(strcmp(key, "fade_in_ms") == 0) {
+			comp.fade_in_ms = (uint32_t)strtoul(val, NULL, 10);
+
+		} else if(strcmp(key, "fade_out_ms") == 0) {
+			comp.fade_out_ms = (uint32_t)strtoul(val, NULL, 10);
+
+		} else if(strcmp(key, "rule") == 0) {
+			if(comp.rule_count >= MAX_RULES) {
+				continue;
+			}
+			if(strncmp(val, "class:", 6) != 0) {
+				continue;
+			}
+			val += 6;
+			char *space = strchr(val, ' ');
+			if(!space) {
+				continue;
+			}
+			struct rule *r = &comp.rules[comp.rule_count];
+			r->opacity = -1.0f;
+			r->corner_radius = -1.0f;
+			r->shadow = -1;
+			size_t class_len = (size_t)(space - val);
+			if(class_len >= sizeof(r->wm_class)) {
+				class_len = sizeof(r->wm_class) - 1;
+			}
+			memcpy(r->wm_class, val, class_len);
+			r->wm_class[class_len] = '\0';
+			val = space + 1;
+			while(*val) {
+				while(*val == ' ' || *val == '\t') {
+					++val;
+				}
+				if(!*val) {
+					break;
+				}
+				if(strncmp(val, "opacity=", 8) == 0) {
+					r->opacity = strtof(val + 8, &val);
+
+				} else if(strncmp(val, "shadow=", 7) == 0) {
+					val += 7;
+					if(strncmp(val, "off", 3) == 0) {
+						r->shadow = 0;
+						val += 3;
+
+					} else if(strncmp(val, "on", 2) == 0) {
+						r->shadow = 1;
+						val += 2;
+					}
+
+				} else if(strncmp(val, "corner_radius=", 14) == 0) {
+					r->corner_radius = strtof(val + 14, &val);
+
+				} else {
+					while(*val && *val != ' ' && *val != '\t') {
+						++val;
+					}
+				}
+			}
+			++comp.rule_count;
 		}
 	}
 

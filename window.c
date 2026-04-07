@@ -74,6 +74,87 @@ static void bind_texture(struct win *w) {
 	w->damaged = 0;
 }
 
+// [=]===^=[ read_wm_opacity ]==============================[=]
+static float read_wm_opacity(Window id) {
+	Atom type;
+	int format;
+	unsigned long nitems, bytes_after;
+	unsigned char *data = NULL;
+
+	XGetWindowProperty(comp.dpy, id, comp.atom_wm_opacity, 0, 1, False, XA_CARDINAL, &type, &format, &nitems, &bytes_after, &data);
+	if(data && nitems == 1 && format == 32) {
+		uint32_t val = *(uint32_t *)data;
+		XFree(data);
+		return (float)val / (float)0xffffffff;
+	}
+	if(data) {
+		XFree(data);
+	}
+	return 1.0f;
+}
+
+// [=]===^=[ read_wm_class ]================================[=]
+static void read_wm_class(struct win *w) {
+	w->wm_class[0] = '\0';
+	XClassHint hint;
+	if(XGetClassHint(comp.dpy, w->id, &hint)) {
+		if(hint.res_class) {
+			strncpy(w->wm_class, hint.res_class, sizeof(w->wm_class) - 1);
+			w->wm_class[sizeof(w->wm_class) - 1] = '\0';
+			XFree(hint.res_class);
+		}
+		if(hint.res_name) {
+			XFree(hint.res_name);
+		}
+	}
+	if(!w->wm_class[0]) {
+		Window root_ret, parent;
+		Window *children = NULL;
+		uint32_t nchildren = 0;
+		if(XQueryTree(comp.dpy, w->id, &root_ret, &parent, &children, &nchildren)) {
+			for(uint32_t i = 0; i < nchildren && !w->wm_class[0]; ++i) {
+				XClassHint ch;
+				if(XGetClassHint(comp.dpy, children[i], &ch)) {
+					if(ch.res_class) {
+						strncpy(w->wm_class, ch.res_class, sizeof(w->wm_class) - 1);
+						w->wm_class[sizeof(w->wm_class) - 1] = '\0';
+						XFree(ch.res_class);
+					}
+					if(ch.res_name) {
+						XFree(ch.res_name);
+					}
+				}
+			}
+		}
+		if(children) {
+			XFree(children);
+		}
+	}
+}
+
+// [=]===^=[ apply_rules ]=================================[=]
+static void apply_rules(struct win *w) {
+	w->rule_opacity = -1.0f;
+	w->rule_corner_radius = -1.0f;
+	w->rule_shadow = -1;
+	if(!w->wm_class[0]) {
+		return;
+	}
+	for(uint32_t i = 0; i < comp.rule_count; ++i) {
+		if(strcmp(w->wm_class, comp.rules[i].wm_class) == 0) {
+			if(comp.rules[i].opacity >= 0.0f) {
+				w->rule_opacity = comp.rules[i].opacity;
+			}
+			if(comp.rules[i].corner_radius >= 0.0f) {
+				w->rule_corner_radius = comp.rules[i].corner_radius;
+			}
+			if(comp.rules[i].shadow >= 0) {
+				w->rule_shadow = comp.rules[i].shadow;
+			}
+		}
+	}
+}
+
 // [=]===^=[ check_demands_attention ]======================[=]
 static uint8_t check_demands_attention(Window id) {
 	Atom type;
@@ -284,7 +365,11 @@ static void add_win(Window id) {
 	w->depth = wa.depth;
 	w->no_effects = wa.override_redirect || check_skip_effects(id);
 	w->urgent = check_demands_attention(id);
-	w->dim_current = (id == comp.active_win || w->no_effects) ? 1.0f : (1.0f - comp.dim_inactive);
+	w->opacity = read_wm_opacity(id);
+	w->dim_current = (id == comp.active_win || w->no_effects) ? 1.0f : comp.inactive_brightness;
+	w->fade = (comp.fade_in_ms > 0) ? 0.0f : 1.0f;
+	read_wm_class(w);
+	apply_rules(w);
 
 	w->mapped = 1;
 	w->damage = XDamageCreate(comp.dpy, id, XDamageReportNonEmpty);

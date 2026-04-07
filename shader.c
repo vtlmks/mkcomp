@@ -65,6 +65,7 @@ static char win_frag_src[] =
 	"uniform vec2 u_size;\n"
 	"uniform float u_radius;\n"
 	"uniform float u_dim;\n"
+"uniform float u_opacity;\n"
 	"varying vec2 v_texcoord;\n"
 	"varying vec2 v_pos;\n"
 	"\n"
@@ -83,6 +84,7 @@ static char win_frag_src[] =
 	"	float aa = 1.0 - smoothstep(-1.0, 0.5, d);\n"
 	"	color *= aa;\n"
 	"	color.rgb *= u_dim;\n"
+	"	color *= u_opacity;\n"
 	"	gl_FragColor = color;\n"
 	"}\n";
 
@@ -115,7 +117,9 @@ static char border_frag_src[] =
 	"uniform vec2 u_pos;\n"
 	"uniform vec2 u_size;\n"
 	"uniform float u_radius;\n"
+	"uniform float u_width;\n"
 	"uniform vec3 u_color;\n"
+	"uniform float u_opacity;\n"
 	"varying vec2 v_pos;\n"
 	"\n"
 	"float rounded_rect(vec2 p, vec2 half_size, float r) {\n"
@@ -127,10 +131,15 @@ static char border_frag_src[] =
 	"	vec2 half_size = u_size * 0.5;\n"
 	"	float r = min(u_radius, min(half_size.x, half_size.y));\n"
 	"	vec2 center = u_pos + half_size;\n"
-	"	float d = rounded_rect(v_pos - center, half_size, r);\n"
-	"	if(d > 0.5) discard;\n"
-	"	float aa = 1.0 - smoothstep(-1.0, 0.5, d);\n"
-	"	gl_FragColor = vec4(u_color * aa, aa);\n"
+	"	float d_outer = rounded_rect(v_pos - center, half_size, r);\n"
+	"	if(d_outer > 0.5) discard;\n"
+	"	vec2 inner_half = half_size - vec2(u_width) - vec2(0.5);\n"
+	"	float ir = max(r - u_width - 0.5, 0.0);\n"
+	"	float d_inner = rounded_rect(v_pos - center, inner_half, ir);\n"
+	"	if(d_inner < 0.0) discard;\n"
+	"	float aa_outer = 1.0 - smoothstep(-1.0, 0.5, d_outer);\n"
+	"	float a = aa_outer;\n"
+	"	gl_FragColor = vec4(u_color * a, a) * u_opacity;\n"
 	"}\n";
 
 // [=]===^=[ compile_shader ]================================[=]
@@ -205,6 +214,7 @@ static void init_shaders(void) {
 		comp.win_size_loc = glGetUniformLocation(comp.win_prog, "u_size");
 		comp.win_radius_loc = glGetUniformLocation(comp.win_prog, "u_radius");
 		comp.win_dim_loc = glGetUniformLocation(comp.win_prog, "u_dim");
+		comp.win_opacity_loc = glGetUniformLocation(comp.win_prog, "u_opacity");
 	}
 
 	comp.shadow_prog = create_program(win_vert_src, shadow_frag_src);
@@ -221,6 +231,8 @@ static void init_shaders(void) {
 		comp.border_pos_loc = glGetUniformLocation(comp.border_prog, "u_pos");
 		comp.border_size_loc = glGetUniformLocation(comp.border_prog, "u_size");
 		comp.border_radius_loc = glGetUniformLocation(comp.border_prog, "u_radius");
+		comp.border_width_loc = glGetUniformLocation(comp.border_prog, "u_width");
 		comp.border_color_loc = glGetUniformLocation(comp.border_prog, "u_color");
+		comp.border_opacity_loc = glGetUniformLocation(comp.border_prog, "u_opacity");
 	}
 }

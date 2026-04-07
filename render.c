@@ -20,7 +20,7 @@ static void render(void) {
 
 	for(uint32_t i = 0; i < comp.win_count; ++i) {
 		struct win *w = &comp.wins[i];
-		if(!w->mapped) {
+		if(!w->mapped && !w->fading_out) {
 			continue;
 		}
 		if(w->needs_rebind) {
@@ -73,8 +73,40 @@ static void render(void) {
 
 	for(uint32_t i = 0; i < nchildren; ++i) {
 		struct win *w = find_win(children[i]);
-		if(!w || !w->mapped || !w->tex) {
+		if(!w || (!w->mapped && !w->fading_out) || !w->tex) {
 			continue;
+		}
+
+		// fade animation
+		if(w->fading_out) {
+			if(comp.fade_out_ms > 0 && dt > 0.0f) {
+				w->fade -= dt / ((float)comp.fade_out_ms / 1000.0f);
+				if(w->fade <= 0.0f) {
+					w->fade = 0.0f;
+					w->mapped = 0;
+					w->fading_out = 0;
+					continue;
+				}
+			} else {
+				w->fade = 0.0f;
+				w->mapped = 0;
+				w->fading_out = 0;
+				continue;
+			}
+			comp.dirty = 1;
+
+		} else if(w->fade < 1.0f) {
+			if(comp.fade_in_ms > 0 && dt > 0.0f) {
+				w->fade += dt / ((float)comp.fade_in_ms / 1000.0f);
+				if(w->fade > 1.0f) {
+					w->fade = 1.0f;
+				}
+			} else {
+				w->fade = 1.0f;
+			}
+			if(w->fade < 1.0f) {
+				comp.dirty = 1;
+			}
 		}
 
 		float wx = (float)w->x;
@@ -83,10 +115,14 @@ static void render(void) {
 		float wh = (float)w->h;
 		uint8_t active = (w->id == comp.active_win);
 
+		float effective_opacity = w->fade * (w->rule_opacity >= 0.0f ? w->rule_opacity : w->opacity);
+		float radius = w->no_effects ? 0.0f : (w->rule_corner_radius >= 0.0f ? w->rule_corner_radius : comp.corner_radius);
+		uint8_t show_shadow = !w->no_effects && (w->rule_shadow < 0 || w->rule_shadow == 1);
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-		if(comp.shadow_prog && comp.shadow_radius > 0.0f && !w->no_effects) {
+		if(comp.shadow_prog && comp.shadow_radius > 0.0f && show_shadow) {
 			float ox = comp.shadow_offset_x;
 			float oy = comp.shadow_offset_y;
 			float pad = comp.shadow_radius * 2.0f;
@@ -94,9 +130,9 @@ static void render(void) {
 			glUseProgram(comp.shadow_prog);
 			glUniform2f(comp.shadow_pos_loc, wx + ox, wy + oy);
 			glUniform2f(comp.shadow_size_loc, ww, wh);
-			glUniform1f(comp.shadow_radius_loc, comp.corner_radius);
+			glUniform1f(comp.shadow_radius_loc, radius);
 			glUniform1f(comp.shadow_sigma_loc, comp.shadow_radius * 0.4f);
-			glUniform1f(comp.shadow_opacity_loc, comp.shadow_opacity);
+			glUniform1f(comp.shadow_opacity_loc, comp.shadow_opacity * effective_opacity);
 
 			glBegin(GL_QUADS);
 			glVertex2f(wx + ox - pad, wy + oy - pad);
@@ -113,8 +149,10 @@ static void render(void) {
 			glUseProgram(comp.border_prog);
 			glUniform2f(comp.border_pos_loc, wx - bw, wy - bw);
 			glUniform2f(comp.border_size_loc, ww + 2.0f * bw, wh + 2.0f * bw);
-			glUniform1f(comp.border_radius_loc, comp.corner_radius + bw);
+			glUniform1f(comp.border_radius_loc, radius + bw);
+			glUniform1f(comp.border_width_loc, bw);
 			glUniform3f(comp.border_color_loc, bc[0], bc[1], bc[2]);
+			glUniform1f(comp.border_opacity_loc, effective_opacity);
 
 			glBegin(GL_QUADS);
 			glVertex2f(wx - bw, wy - bw);
@@ -124,11 +162,10 @@ static void render(void) {
 			glEnd();
 		}
 
-		float radius = w->no_effects ? 0.0f : comp.corner_radius;
-
-		float target_dim = (active || w->no_effects) ? 1.0f : (1.0f - comp.dim_inactive);
-		if(comp.focus_transition_ms > 0 && dt > 0.0f && comp.dim_inactive > 0.0f) {
-			float rate = comp.dim_inactive / ((float)comp.focus_transition_ms / 1000.0f);
+		float target_dim = (active || w->no_effects) ? 1.0f : comp.inactive_brightness;
+		if(comp.focus_transition_ms > 0 && dt > 0.0f && comp.inactive_brightness < 1.0f) {
+			float range = 1.0f - comp.inactive_brightness;
+			float rate = range / ((float)comp.focus_transition_ms / 1000.0f);
 			float step = rate * dt;
 			if(w->dim_current < target_dim) {
 				w->dim_current += step;
@@ -156,9 +193,10 @@ static void render(void) {
 			glUniform2f(comp.win_size_loc, ww, wh);
 			glUniform1f(comp.win_radius_loc, radius);
 			glUniform1f(comp.win_dim_loc, w->dim_current);
+			glUniform1f(comp.win_opacity_loc, effective_opacity);
 		}
 
-		uint8_t needs_blend = (w->depth == 32 || radius > 0.0f);
+		uint8_t needs_blend = (w->depth == 32 || radius > 0.0f || effective_opacity < 1.0f);
 		if(!needs_blend) {
 			glDisable(GL_BLEND);
 		}

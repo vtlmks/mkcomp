@@ -65,6 +65,10 @@ static void handle_map(XMapEvent *ev) {
 	struct win *w = find_win(ev->window);
 	if(w) {
 		w->mapped = 1;
+		w->fading_out = 0;
+		if(comp.fade_in_ms > 0) {
+			w->fade = 0.0f;
+		}
 		unbind_texture(w);
 		w->needs_rebind = 1;
 
@@ -76,7 +80,13 @@ static void handle_map(XMapEvent *ev) {
 // [=]===^=[ handle_unmap ]==================================[=]
 static void handle_unmap(XUnmapEvent *ev) {
 	struct win *w = find_win(ev->window);
-	if(w) {
+	if(!w) {
+		return;
+	}
+	if(comp.fade_out_ms > 0 && w->fade > 0.0f) {
+		w->fading_out = 1;
+
+	} else {
 		w->mapped = 0;
 	}
 }
@@ -155,6 +165,13 @@ static void handle_property(XPropertyEvent *ev) {
 		}
 
 		w->urgent = check_demands_attention(ev->window);
+	}
+
+	if(ev->atom == comp.atom_wm_opacity) {
+		struct win *w = find_win(ev->window);
+		if(w) {
+			w->opacity = read_wm_opacity(ev->window);
+		}
 	}
 }
 
