@@ -96,6 +96,7 @@ static float read_wm_opacity(Window id) {
 // [=]===^=[ read_wm_class ]================================[=]
 static void read_wm_class(struct win *w) {
 	w->wm_class[0] = '\0';
+	w->wm_instance[0] = '\0';
 	XClassHint hint;
 	if(XGetClassHint(comp.dpy, w->id, &hint)) {
 		if(hint.res_class) {
@@ -104,10 +105,12 @@ static void read_wm_class(struct win *w) {
 			XFree(hint.res_class);
 		}
 		if(hint.res_name) {
+			strncpy(w->wm_instance, hint.res_name, sizeof(w->wm_instance) - 1);
+			w->wm_instance[sizeof(w->wm_instance) - 1] = '\0';
 			XFree(hint.res_name);
 		}
 	}
-	if(!w->wm_class[0]) {
+	if(!w->wm_class[0] && !w->wm_instance[0]) {
 		Window root_ret, parent;
 		Window *children = NULL;
 		uint32_t nchildren = 0;
@@ -121,6 +124,8 @@ static void read_wm_class(struct win *w) {
 						XFree(ch.res_class);
 					}
 					if(ch.res_name) {
+						strncpy(w->wm_instance, ch.res_name, sizeof(w->wm_instance) - 1);
+						w->wm_instance[sizeof(w->wm_instance) - 1] = '\0';
 						XFree(ch.res_name);
 					}
 				}
@@ -137,11 +142,11 @@ static void apply_rules(struct win *w) {
 	w->rule_opacity = -1.0f;
 	w->rule_corner_radius = -1.0f;
 	w->rule_shadow = -1;
-	if(!w->wm_class[0]) {
+	if(!w->wm_class[0] && !w->wm_instance[0]) {
 		return;
 	}
 	for(uint32_t i = 0; i < comp.rule_count; ++i) {
-		if(strcmp(w->wm_class, comp.rules[i].wm_class) == 0) {
+		if((w->wm_class[0] && strcasecmp(w->wm_class, comp.rules[i].wm_class) == 0) || (w->wm_instance[0] && strcasecmp(w->wm_instance, comp.rules[i].wm_class) == 0)) {
 			if(comp.rules[i].opacity >= 0.0f) {
 				w->rule_opacity = comp.rules[i].opacity;
 			}

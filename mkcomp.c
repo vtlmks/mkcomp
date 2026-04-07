@@ -1,12 +1,13 @@
 // Copyright (c) 2026 vital
 // SPDX-License-Identifier: MIT
 
-#define _POSIX_C_SOURCE 199309L
+#define _POSIX_C_SOURCE 200809L
 #define GL_GLEXT_PROTOTYPES
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <stdint.h>
 #include <signal.h>
 #include <time.h>
@@ -71,6 +72,7 @@ struct win {
 	uint8_t urgent;
 	uint8_t fading_out;
 	char wm_class[128];
+	char wm_instance[128];
 };
 
 struct rule {
@@ -258,6 +260,9 @@ static void run(void) {
 
 		if(reload_config) {
 			load_config();
+			for(uint32_t i = 0; i < comp.win_count; ++i) {
+				apply_rules(&comp.wins[i]);
+			}
 			reload_config = 0;
 			comp.dirty = 1;
 			fprintf(stderr, "mkcomp: config reloaded (signal)\n");
@@ -267,6 +272,9 @@ static void run(void) {
 			char inbuf[256];
 			if(read(comp.inotify_fd, inbuf, sizeof(inbuf)) > 0) {
 				load_config();
+				for(uint32_t i = 0; i < comp.win_count; ++i) {
+					apply_rules(&comp.wins[i]);
+				}
 				comp.dirty = 1;
 				fprintf(stderr, "mkcomp: config reloaded\n");
 			}
