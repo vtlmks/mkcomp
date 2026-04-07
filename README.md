@@ -1,22 +1,22 @@
 # mkcomp
 
-A small X11 compositor with shadows, rounded corners, blur, and per-window rules. Single C99 file, no build system -- just a shell script.
+A small X11 compositor with shadows, rounded corners, blur, and per-window rules. Single C99 file, no build system: just a shell script.
 
 ## Features
 
-- **Shadows** -- configurable radius, opacity, and offset
-- **Rounded corners** -- per-window or global
-- **Background blur** -- dual kawase blur behind transparent windows
-- **Window opacity** -- via `_NET_WM_WINDOW_OPACITY` or per-window rules
-- **Focus border** -- colored outline on the active window
-- **Urgent border** -- distinct color for `_NET_WM_STATE_DEMANDS_ATTENTION`
-- **Inactive dimming** -- configurable brightness reduction with animated transitions
-- **Fade in/out** -- smooth map/unmap animations
-- **Per-window rules** -- match by `WM_CLASS` to override any effect
-- **Fullscreen bypass** -- unredirects fullscreen windows for direct scanout
-- **Vblank-driven rendering** -- uses the X Present extension for proper frame pacing
-- **Event-driven idle** -- zero CPU usage when nothing changes
-- **Hot-reload** -- config changes apply immediately via inotify
+- **Shadows**: configurable radius, opacity, and offset
+- **Rounded corners**: per-window or global
+- **Background blur**: dual kawase blur behind transparent windows
+- **Window opacity**: via `_NET_WM_WINDOW_OPACITY` or per-window rules
+- **Focus border**: colored outline on the active window
+- **Urgent border**: distinct color for `_NET_WM_STATE_DEMANDS_ATTENTION`
+- **Inactive dimming**: configurable brightness reduction with animated transitions
+- **Fade in/out**: smooth map/unmap animations
+- **Per-window rules**: match by `WM_CLASS` to override any effect
+- **Fullscreen bypass**: unredirects fullscreen windows for direct scanout
+- **Vblank-driven rendering**: uses the X Present extension for proper frame pacing
+- **Event-driven idle**: zero CPU usage when nothing changes
+- **Hot-reload**: config changes apply immediately via inotify
 
 ## Building
 
