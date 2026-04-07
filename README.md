@@ -1,8 +1,6 @@
 # mkcomp
 
-A lightweight X11 compositor with shadows, rounded corners, blur, and per-window rules. Written in C99 as a single compilation unit with no build system -- just a shell script.
-
-mkcomp aims to be small and correct rather than feature-complete. It does what a compositor should do (shadows, transparency, blur, focus indication) without the complexity of larger compositors.
+A small X11 compositor with shadows, rounded corners, blur, and per-window rules. Single C99 file, no build system -- just a shell script.
 
 ## Features
 

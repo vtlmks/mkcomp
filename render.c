@@ -189,7 +189,6 @@ static void render(void) {
 			continue;
 		}
 
-		// fade animation
 		if(w->fading_out) {
 			if(comp.fade_out_ms > 0 && dt > 0.0f) {
 				w->fade -= dt / ((float)comp.fade_out_ms / 1000.0f);
