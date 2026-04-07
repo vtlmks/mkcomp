@@ -8,6 +8,10 @@ static void load_config(void) {
 	comp.bg_color[2] = 1.0f;
 	comp.bg_intensity = 0.0f;
 	comp.bg_speed = 1.0f;
+	comp.bg_color2[0] = 0.2f;
+	comp.bg_color2[1] = 0.1f;
+	comp.bg_color2[2] = 0.05f;
+	comp.bg_shader_type = 0;
 	comp.shadow_radius = 20.0f;
 	comp.shadow_opacity = 0.6f;
 	comp.shadow_offset_x = 5.0f;
@@ -69,12 +73,27 @@ static void load_config(void) {
 		while(*val == ' ' || *val == '\t') {
 			++val;
 		}
+		char *ve = val + strlen(val) - 1;
+		while(ve > val && (*ve == ' ' || *ve == '\t' || *ve == '\n' || *ve == '\r')) {
+			--ve;
+		}
+		*(ve + 1) = '\0';
 
 		if(strcmp(key, "bg_color") == 0) {
 			sscanf(val, "%f %f %f", &comp.bg_color[0], &comp.bg_color[1], &comp.bg_color[2]);
 
 		} else if(strcmp(key, "bg_intensity") == 0) {
 			comp.bg_intensity = strtof(val, NULL);
+
+		} else if(strcmp(key, "bg_shader") == 0) {
+			if(strcmp(val, "warp") == 0) {
+				comp.bg_shader_type = 1;
+			} else {
+				comp.bg_shader_type = 0;
+			}
+
+		} else if(strcmp(key, "bg_color2") == 0) {
+			sscanf(val, "%f %f %f", &comp.bg_color2[0], &comp.bg_color2[1], &comp.bg_color2[2]);
 
 		} else if(strcmp(key, "bg_speed") == 0) {
 			comp.bg_speed = strtof(val, NULL);

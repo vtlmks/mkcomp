@@ -61,9 +61,16 @@ Create `~/.config/mkcomp/mkcomp.conf` with key-value pairs. Lines starting with 
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `bg_color` | `1.0 1.0 1.0` | Background color (R G B, 0.0-1.0) |
-| `bg_intensity` | `0` | Perlin noise intensity (0 = use wallpaper) |
+| `bg_shader` | `noise` | Background shader (`noise` or `warp`) |
+| `bg_color` | `1.0 1.0 1.0` | Primary background color (R G B, 0.0-1.0) |
+| `bg_color2` | `0.2 0.1 0.05` | Secondary color for warp mode (R G B, 0.0-1.0) |
+| `bg_intensity` | `0` | Shader intensity (0 = use wallpaper) |
 | `bg_speed` | `1.0` | Animation speed (0 = static) |
+
+Two animated background shaders are available:
+
+- `noise`: perlin noise, tinted by `bg_color`
+- `warp`: domain-warped FBM with rotated octaves, blending between `bg_color` (bright strands) and `bg_color2` (dark base)
 
 When `bg_intensity` is 0, mkcomp shows your wallpaper by reading the root window pixmap (`_XROOTPMAP_ID`). This works with wallpaper setters like `feh`, `nitrogen`, and `hsetroot`. The wallpaper updates automatically when changed.
 
@@ -117,9 +124,11 @@ Available properties:
 
 ```
 # background
+bg_shader = warp
 bg_color = 0.4 0.6 1.0
+bg_color2 = 0.15 0.08 0.04
 bg_intensity = 0.25
-bg_speed = 4.0
+bg_speed = 1.0
 
 # shadows
 shadow_radius = 20

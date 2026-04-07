@@ -111,7 +111,31 @@ static void render(void) {
 
 	glXWaitX();
 
-	if(comp.bg_prog && comp.bg_intensity > 0.0f) {
+	if(comp.bg_intensity > 0.0f && comp.bg_shader_type == 1 && comp.bg_warp_prog) {
+		float t = (float)(get_time_us() - comp.start_us) / 1000000.0f;
+		glUseProgram(comp.bg_warp_prog);
+		glUniform1f(comp.bg_warp_time_loc, t);
+		glUniform2f(comp.bg_warp_resolution_loc, (float)comp.root_w, (float)comp.root_h);
+		glUniform3f(comp.bg_warp_color_loc, comp.bg_color[0], comp.bg_color[1], comp.bg_color[2]);
+		glUniform3f(comp.bg_warp_color2_loc, comp.bg_color2[0], comp.bg_color2[1], comp.bg_color2[2]);
+		glUniform1f(comp.bg_warp_intensity_loc, comp.bg_intensity);
+		glUniform1f(comp.bg_warp_speed_loc, comp.bg_speed);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glBegin(GL_QUADS);
+		glVertex2f(-1.0f, -1.0f);
+		glVertex2f(1.0f, -1.0f);
+		glVertex2f(1.0f, 1.0f);
+		glVertex2f(-1.0f, 1.0f);
+		glEnd();
+
+		glUseProgram(0);
+
+	} else if(comp.bg_intensity > 0.0f && comp.bg_prog) {
 		float t = (float)(get_time_us() - comp.start_us) / 1000000.0f;
 		glUseProgram(comp.bg_prog);
 		glUniform1f(comp.bg_time_loc, t);

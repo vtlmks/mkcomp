@@ -48,6 +48,80 @@ static char bg_frag_src[] =
 	"	gl_FragColor = vec4(n * u_color, 1.0);\n"
 	"}\n";
 
+static char bg_warp_frag_src[] =
+	"#version 120\n"
+	"uniform float u_time;\n"
+	"uniform vec2 u_resolution;\n"
+	"uniform vec3 u_color;\n"
+	"uniform vec3 u_color2;\n"
+	"uniform float u_intensity;\n"
+	"uniform float u_speed;\n"
+	"\n"
+	"vec2 hash(vec2 p) {\n"
+	"	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));\n"
+	"	q += dot(q, q.yzx + 33.33);\n"
+	"	float a = fract((q.x + q.y) * q.z) * 6.2831853;\n"
+	"	return vec2(cos(a), sin(a));\n"
+	"}\n"
+	"\n"
+	"float noise(vec2 p) {\n"
+	"	vec2 i = floor(p);\n"
+	"	vec2 f = fract(p);\n"
+	"	vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n"
+	"	return mix(\n"
+	"		mix(dot(hash(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0)),\n"
+	"		    dot(hash(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),\n"
+	"		mix(dot(hash(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),\n"
+	"		    dot(hash(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x),\n"
+	"		u.y);\n"
+	"}\n"
+	"\n"
+	"mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);\n"
+	"\n"
+	"float fbm4(vec2 p) {\n"
+	"	float f = 0.0;\n"
+	"	f += 0.5000 * noise(p); p = rot * p * 2.02;\n"
+	"	f += 0.2500 * noise(p); p = rot * p * 2.03;\n"
+	"	f += 0.1250 * noise(p); p = rot * p * 2.01;\n"
+	"	f += 0.0625 * noise(p);\n"
+	"	return f / 0.9375;\n"
+	"}\n"
+	"\n"
+	"float fbm6(vec2 p) {\n"
+	"	float f = 0.0;\n"
+	"	f += 0.500000 * noise(p); p = rot * p * 2.02;\n"
+	"	f += 0.250000 * noise(p); p = rot * p * 2.03;\n"
+	"	f += 0.125000 * noise(p); p = rot * p * 2.01;\n"
+	"	f += 0.062500 * noise(p); p = rot * p * 2.04;\n"
+	"	f += 0.031250 * noise(p); p = rot * p * 2.01;\n"
+	"	f += 0.015625 * noise(p);\n"
+	"	return f / 0.984375;\n"
+	"}\n"
+	"\n"
+	"void main() {\n"
+	"	vec2 uv = gl_FragCoord.xy / u_resolution.y;\n"
+	"	float t = u_time * u_speed;\n"
+	"	uv += 0.04 * sin(vec2(0.11, 0.13) * t + length(uv) * 3.0);\n"
+	"	vec2 t1 = vec2(sin(t * 0.031), cos(t * 0.023)) * 0.8;\n"
+	"	vec2 t2 = vec2(cos(t * 0.017), sin(t * 0.029)) * 0.6;\n"
+	"	vec2 t3 = vec2(sin(t * 0.013), -cos(t * 0.019)) * 0.5;\n"
+	"	vec2 o = vec2(fbm4(uv + vec2(1.0, 0.3) + t1),\n"
+	"	              fbm4(uv + vec2(6.2, 1.8) + t2));\n"
+	"	o = 0.5 + 0.5 * o;\n"
+	"	o += 0.02 * sin(vec2(0.13, 0.11) * t * length(o));\n"
+	"	vec2 n = vec2(fbm6(4.0 * o + vec2(9.2, 3.4) + t3),\n"
+	"	              fbm6(4.0 * o + vec2(5.7, 7.1) - t3));\n"
+	"	float f = 0.5 + 0.5 * fbm4(2.0 * (uv + 2.0 * n + 1.0));\n"
+	"	f = mix(f, f * f * f * 3.5, f * abs(n.x));\n"
+	"	vec3 col = mix(u_color2, u_color, f);\n"
+	"	col = mix(col, u_color * 1.5, dot(n, n) * 0.4);\n"
+	"	col = mix(col, u_color2 * 0.6, 0.5 * o.y * o.y);\n"
+	"	col *= f * 2.0 * u_intensity;\n"
+	"	float dither = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;\n"
+	"	col += dither;\n"
+	"	gl_FragColor = vec4(col, 1.0);\n"
+	"}\n";
+
 static char win_vert_src[] =
 	"#version 120\n"
 	"varying vec2 v_texcoord;\n"
@@ -273,6 +347,16 @@ static void init_shaders(void) {
 		comp.bg_color_loc = glGetUniformLocation(comp.bg_prog, "u_color");
 		comp.bg_intensity_loc = glGetUniformLocation(comp.bg_prog, "u_intensity");
 		comp.bg_speed_loc = glGetUniformLocation(comp.bg_prog, "u_speed");
+	}
+
+	comp.bg_warp_prog = create_program(bg_vert_src, bg_warp_frag_src);
+	if(comp.bg_warp_prog) {
+		comp.bg_warp_time_loc = glGetUniformLocation(comp.bg_warp_prog, "u_time");
+		comp.bg_warp_resolution_loc = glGetUniformLocation(comp.bg_warp_prog, "u_resolution");
+		comp.bg_warp_color_loc = glGetUniformLocation(comp.bg_warp_prog, "u_color");
+		comp.bg_warp_color2_loc = glGetUniformLocation(comp.bg_warp_prog, "u_color2");
+		comp.bg_warp_intensity_loc = glGetUniformLocation(comp.bg_warp_prog, "u_intensity");
+		comp.bg_warp_speed_loc = glGetUniformLocation(comp.bg_warp_prog, "u_speed");
 	}
 
 	comp.win_prog = create_program(win_vert_src, win_frag_src);

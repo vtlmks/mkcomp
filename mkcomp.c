@@ -105,6 +105,13 @@ struct compositor {
 	int32_t bg_color_loc;
 	int32_t bg_intensity_loc;
 	int32_t bg_speed_loc;
+	uint32_t bg_warp_prog;
+	int32_t bg_warp_time_loc;
+	int32_t bg_warp_resolution_loc;
+	int32_t bg_warp_color_loc;
+	int32_t bg_warp_color2_loc;
+	int32_t bg_warp_intensity_loc;
+	int32_t bg_warp_speed_loc;
 	uint64_t start_us;
 	uint32_t win_prog;
 	int32_t win_pos_loc;
@@ -159,6 +166,8 @@ struct compositor {
 	GLXPixmap root_bg_glx_pixmap;
 	uint32_t root_bg_tex;
 	float bg_color[3];
+	float bg_color2[3];
+	uint8_t bg_shader_type;
 	float bg_intensity;
 	float bg_speed;
 	float shadow_radius;
@@ -261,7 +270,7 @@ static void run(void) {
 	}
 
 	while(comp.running) {
-		uint8_t bg_animated = (!comp.fullscreen_win && comp.bg_prog && comp.bg_intensity > 0.0f && comp.bg_speed > 0.0f);
+		uint8_t bg_animated = (!comp.fullscreen_win && (comp.bg_prog || comp.bg_warp_prog) && comp.bg_intensity > 0.0f && comp.bg_speed > 0.0f);
 		uint8_t need_frame = (comp.dirty || bg_animated) && !comp.fullscreen_win;
 
 		if(comp.has_present && need_frame) {
@@ -348,6 +357,9 @@ static void cleanup(void) {
 
 	if(comp.bg_prog) {
 		glDeleteProgram(comp.bg_prog);
+	}
+	if(comp.bg_warp_prog) {
+		glDeleteProgram(comp.bg_warp_prog);
 	}
 	if(comp.win_prog) {
 		glDeleteProgram(comp.win_prog);
