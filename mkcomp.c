@@ -66,6 +66,7 @@ struct win {
 	float rule_corner_radius;
 	int8_t rule_shadow;
 	int8_t rule_blur;
+	int8_t rule_border;
 	uint8_t damaged;
 	uint8_t needs_rebind;
 	uint8_t no_effects;
@@ -83,6 +84,7 @@ struct rule {
 	float corner_radius;
 	int8_t shadow;
 	int8_t blur;
+	int8_t border;
 };
 
 struct compositor {
@@ -466,6 +468,13 @@ int main(int32_t argc, char **argv) {
 	comp.atom_state_attention = XInternAtom(comp.dpy, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
 	comp.atom_wm_opacity = XInternAtom(comp.dpy, "_NET_WM_WINDOW_OPACITY", False);
 	comp.atom_root_pixmap = XInternAtom(comp.dpy, "_XROOTPMAP_ID", False);
+
+	char cm_name[32];
+	snprintf(cm_name, sizeof(cm_name), "_NET_WM_CM_S%d", comp.screen);
+	Atom cm_atom = XInternAtom(comp.dpy, cm_name, False);
+	if(!XGetSelectionOwner(comp.dpy, cm_atom)) {
+		XSetSelectionOwner(comp.dpy, cm_atom, comp.gl_win, CurrentTime);
+	}
 
 	XSelectInput(comp.dpy, comp.root, SubstructureNotifyMask | PropertyChangeMask);
 	XSetErrorHandler(runtime_error_handler);

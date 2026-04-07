@@ -283,7 +283,7 @@ static void render(void) {
 			glEnd();
 		}
 
-		if(comp.border_prog && comp.border_width > 0.0f && (active || w->urgent) && !w->no_effects) {
+		if(comp.border_prog && comp.border_width > 0.0f && (active || w->urgent) && !w->no_effects && (w->rule_border < 0 || w->rule_border == 1)) {
 			float bw = comp.border_width;
 			float *bc = w->urgent ? comp.urgent_border_color : comp.border_color;
 

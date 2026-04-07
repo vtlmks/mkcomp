@@ -201,6 +201,7 @@ static void apply_rules(struct win *w) {
 	w->rule_corner_radius = -1.0f;
 	w->rule_shadow = -1;
 	w->rule_blur = -1;
+	w->rule_border = -1;
 	if(!w->wm_class[0] && !w->wm_instance[0]) {
 		return;
 	}
@@ -217,6 +218,9 @@ static void apply_rules(struct win *w) {
 			}
 			if(comp.rules[i].blur >= 0) {
 				w->rule_blur = comp.rules[i].blur;
+			}
+			if(comp.rules[i].border >= 0) {
+				w->rule_border = comp.rules[i].border;
 			}
 		}
 	}
@@ -413,9 +417,22 @@ static void add_win(Window id) {
 	Window child_root, child_parent;
 	Window *child_list = NULL;
 	uint32_t child_count = 0;
+	uint8_t has_client_child = 0;
 	if(XQueryTree(comp.dpy, id, &child_root, &child_parent, &child_list, &child_count)) {
 		for(uint32_t j = 0; j < child_count; ++j) {
 			XSelectInput(comp.dpy, child_list[j], PropertyChangeMask);
+			if(!has_client_child) {
+				XClassHint ch;
+				if(XGetClassHint(comp.dpy, child_list[j], &ch)) {
+					has_client_child = 1;
+					if(ch.res_class) {
+						XFree(ch.res_class);
+					}
+					if(ch.res_name) {
+						XFree(ch.res_name);
+					}
+				}
+			}
 		}
 	}
 	if(child_list) {
@@ -430,7 +447,7 @@ static void add_win(Window id) {
 	w->w = wa.width + 2 * wa.border_width;
 	w->h = wa.height + 2 * wa.border_width;
 	w->depth = wa.depth;
-	w->no_effects = wa.override_redirect || check_skip_effects(id);
+	w->no_effects = (wa.override_redirect && !has_client_child) || check_skip_effects(id);
 	w->urgent = check_demands_attention(id);
 	w->opacity = read_wm_opacity(id);
 	w->dim_current = (id == comp.active_win || w->no_effects) ? 1.0f : comp.inactive_brightness;

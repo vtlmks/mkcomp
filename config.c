@@ -160,6 +160,7 @@ static void load_config(void) {
 			r->corner_radius = -1.0f;
 			r->shadow = -1;
 			r->blur = -1;
+			r->border = -1;
 			size_t class_len = (size_t)(space - val);
 			if(class_len >= sizeof(r->wm_class)) {
 				class_len = sizeof(r->wm_class) - 1;
@@ -199,6 +200,17 @@ static void load_config(void) {
 
 					} else if(strncmp(val, "on", 2) == 0) {
 						r->blur = 1;
+						val += 2;
+					}
+
+				} else if(strncmp(val, "border=", 7) == 0) {
+					val += 7;
+					if(strncmp(val, "off", 3) == 0) {
+						r->border = 0;
+						val += 3;
+
+					} else if(strncmp(val, "on", 2) == 0) {
+						r->border = 1;
 						val += 2;
 					}
 

@@ -117,6 +117,7 @@ Available properties:
 |----------|--------|-------------|
 | `opacity` | 0.0-1.0 | Window opacity override |
 | `shadow` | `on`, `off` | Enable/disable shadow |
+| `border` | `on`, `off` | Enable/disable focus/urgent border |
 | `corner_radius` | pixels | Corner radius override |
 | `blur` | `on`, `off` | Enable/disable background blur |
 
@@ -150,6 +151,7 @@ blur_strength = 3
 # rules
 rule = class:Alacritty blur=on
 rule = class:polybar corner_radius=0 shadow=off
+rule = class:firefox shadow=off blur=off border=off
 ```
 
 ## Blur
@@ -162,6 +164,16 @@ mkcomp uses dual kawase blur, which is fast and scales well to large blur radii.
 For the best result with terminals, use the terminal's own background transparency setting rather than compositor opacity. This keeps text crisp at full brightness while only the background is transparent and blurred.
 
 Blur can be controlled per-window with `blur=on` or `blur=off` in rules.
+
+## GNOME/GTK applications
+
+Firefox and other GTK applications detect they are running under a compositor and render their own client-side shadows and borders. This is designed for GNOME's Mutter compositor and causes problems on every other compositor: double shadows, thick borders around windows, and other visual garbage. Disable compositor effects for these windows with rules:
+
+```
+rule = class:firefox shadow=off blur=off border=off
+```
+
+Use `xprop | grep WM_CLASS` and click the offending window to find its class name.
 
 ## How it works
 
