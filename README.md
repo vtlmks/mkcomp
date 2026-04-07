@@ -44,7 +44,14 @@ This produces a single `mkcomp` binary.
 mkcomp
 ```
 
-mkcomp reads its configuration from `~/.config/mkcomp/config`. Send `SIGHUP` to reload the config, or just save the file (inotify picks it up automatically).
+Copy the example config and edit to taste:
+
+```
+mkdir -p ~/.config/mkcomp
+cp mkcomp.conf ~/.config/mkcomp/config
+```
+
+mkcomp works without a config file (sensible defaults), but most users will want to tweak at least shadows and corner radius. Changes are picked up automatically via inotify, or send `SIGHUP` to reload.
 
 To stop, send `SIGINT` or `SIGTERM`.
 
