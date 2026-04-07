@@ -142,6 +142,74 @@ static char border_frag_src[] =
 	"	gl_FragColor = vec4(u_color * a, a) * u_opacity;\n"
 	"}\n";
 
+static char blur_vert_src[] =
+	"#version 120\n"
+	"varying vec2 v_texcoord;\n"
+	"void main() {\n"
+	"	gl_Position = gl_Vertex;\n"
+	"	v_texcoord = gl_Vertex.xy * 0.5 + 0.5;\n"
+	"}\n";
+
+static char blur_down_frag_src[] =
+	"#version 120\n"
+	"uniform sampler2D u_tex;\n"
+	"uniform vec2 u_halfpixel;\n"
+	"varying vec2 v_texcoord;\n"
+	"void main() {\n"
+	"	vec2 uv = v_texcoord;\n"
+	"	vec4 sum = texture2D(u_tex, uv) * 4.0;\n"
+	"	sum += texture2D(u_tex, uv - u_halfpixel);\n"
+	"	sum += texture2D(u_tex, uv + u_halfpixel);\n"
+	"	sum += texture2D(u_tex, uv + vec2(u_halfpixel.x, -u_halfpixel.y));\n"
+	"	sum += texture2D(u_tex, uv + vec2(-u_halfpixel.x, u_halfpixel.y));\n"
+	"	gl_FragColor = sum / 8.0;\n"
+	"}\n";
+
+static char blur_up_frag_src[] =
+	"#version 120\n"
+	"uniform sampler2D u_tex;\n"
+	"uniform vec2 u_halfpixel;\n"
+	"varying vec2 v_texcoord;\n"
+	"void main() {\n"
+	"	vec2 uv = v_texcoord;\n"
+	"	vec4 sum = texture2D(u_tex, uv + vec2(-u_halfpixel.x * 2.0, 0.0));\n"
+	"	sum += texture2D(u_tex, uv + vec2(-u_halfpixel.x, u_halfpixel.y)) * 2.0;\n"
+	"	sum += texture2D(u_tex, uv + vec2(0.0, u_halfpixel.y * 2.0));\n"
+	"	sum += texture2D(u_tex, uv + vec2(u_halfpixel.x, u_halfpixel.y)) * 2.0;\n"
+	"	sum += texture2D(u_tex, uv + vec2(u_halfpixel.x * 2.0, 0.0));\n"
+	"	sum += texture2D(u_tex, uv + vec2(u_halfpixel.x, -u_halfpixel.y)) * 2.0;\n"
+	"	sum += texture2D(u_tex, uv + vec2(0.0, -u_halfpixel.y * 2.0));\n"
+	"	sum += texture2D(u_tex, uv + vec2(-u_halfpixel.x, -u_halfpixel.y)) * 2.0;\n"
+	"	gl_FragColor = sum / 12.0;\n"
+	"}\n";
+
+static char blur_composite_frag_src[] =
+	"#version 120\n"
+	"uniform sampler2D u_tex;\n"
+	"uniform vec2 u_pos;\n"
+	"uniform vec2 u_size;\n"
+	"uniform vec2 u_screen_size;\n"
+	"uniform float u_radius;\n"
+	"uniform float u_opacity;\n"
+	"varying vec2 v_pos;\n"
+	"\n"
+	"float rounded_rect(vec2 p, vec2 half_size, float r) {\n"
+	"	vec2 q = abs(p) - half_size + vec2(r);\n"
+	"	return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;\n"
+	"}\n"
+	"\n"
+	"void main() {\n"
+	"	vec2 screen_uv = gl_FragCoord.xy / u_screen_size;\n"
+	"	vec3 color = texture2D(u_tex, screen_uv).rgb;\n"
+	"	vec2 half_size = u_size * 0.5;\n"
+	"	float r = min(u_radius, min(half_size.x, half_size.y));\n"
+	"	vec2 center = u_pos + half_size;\n"
+	"	float d = rounded_rect(v_pos - center, half_size, r);\n"
+	"	if(d > 0.5) discard;\n"
+	"	float a = (1.0 - smoothstep(-1.0, 0.5, d)) * u_opacity;\n"
+	"	gl_FragColor = vec4(color * a, a);\n"
+	"}\n";
+
 // [=]===^=[ compile_shader ]================================[=]
 static uint32_t compile_shader(uint32_t type, char *src) {
 	uint32_t s = glCreateShader(type);
@@ -234,5 +302,33 @@ static void init_shaders(void) {
 		comp.border_width_loc = glGetUniformLocation(comp.border_prog, "u_width");
 		comp.border_color_loc = glGetUniformLocation(comp.border_prog, "u_color");
 		comp.border_opacity_loc = glGetUniformLocation(comp.border_prog, "u_opacity");
+	}
+
+	comp.blur_down_prog = create_program(blur_vert_src, blur_down_frag_src);
+	if(comp.blur_down_prog) {
+		glUseProgram(comp.blur_down_prog);
+		glUniform1i(glGetUniformLocation(comp.blur_down_prog, "u_tex"), 0);
+		glUseProgram(0);
+		comp.blur_down_halfpixel_loc = glGetUniformLocation(comp.blur_down_prog, "u_halfpixel");
+	}
+
+	comp.blur_up_prog = create_program(blur_vert_src, blur_up_frag_src);
+	if(comp.blur_up_prog) {
+		glUseProgram(comp.blur_up_prog);
+		glUniform1i(glGetUniformLocation(comp.blur_up_prog, "u_tex"), 0);
+		glUseProgram(0);
+		comp.blur_up_halfpixel_loc = glGetUniformLocation(comp.blur_up_prog, "u_halfpixel");
+	}
+
+	comp.blur_composite_prog = create_program(win_vert_src, blur_composite_frag_src);
+	if(comp.blur_composite_prog) {
+		glUseProgram(comp.blur_composite_prog);
+		glUniform1i(glGetUniformLocation(comp.blur_composite_prog, "u_tex"), 0);
+		glUseProgram(0);
+		comp.blur_composite_pos_loc = glGetUniformLocation(comp.blur_composite_prog, "u_pos");
+		comp.blur_composite_size_loc = glGetUniformLocation(comp.blur_composite_prog, "u_size");
+		comp.blur_composite_screen_size_loc = glGetUniformLocation(comp.blur_composite_prog, "u_screen_size");
+		comp.blur_composite_radius_loc = glGetUniformLocation(comp.blur_composite_prog, "u_radius");
+		comp.blur_composite_opacity_loc = glGetUniformLocation(comp.blur_composite_prog, "u_opacity");
 	}
 }

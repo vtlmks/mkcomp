@@ -8,6 +8,85 @@ static uint64_t get_time_us(void) {
 	return (uint64_t)ts.tv_sec * 1000000 + (uint64_t)ts.tv_nsec / 1000;
 }
 
+// [=]===^=[ draw_blur_quad ]================================[=]
+static void draw_blur_quad(void) {
+	glBegin(GL_QUADS);
+	glVertex2f(-1.0f, -1.0f);
+	glVertex2f(1.0f, -1.0f);
+	glVertex2f(1.0f, 1.0f);
+	glVertex2f(-1.0f, 1.0f);
+	glEnd();
+}
+
+// [=]===^=[ blur_process ]=================================[=]
+static void blur_process(void) {
+	uint32_t passes = comp.blur_strength;
+
+	glBindTexture(GL_TEXTURE_2D, comp.blur_tex[0]);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, comp.blur_w[0], comp.blur_h[0]);
+
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glDisable(GL_BLEND);
+
+	glUseProgram(comp.blur_down_prog);
+	for(uint32_t i = 0; i < passes; ++i) {
+		glBindFramebuffer(GL_FRAMEBUFFER, comp.blur_fbo[i + 1]);
+		glViewport(0, 0, comp.blur_w[i + 1], comp.blur_h[i + 1]);
+		glBindTexture(GL_TEXTURE_2D, comp.blur_tex[i]);
+		glUniform2f(comp.blur_down_halfpixel_loc, 0.5f / (float)comp.blur_w[i], 0.5f / (float)comp.blur_h[i]);
+		draw_blur_quad();
+	}
+
+	glUseProgram(comp.blur_up_prog);
+	for(uint32_t i = passes; i > 0; --i) {
+		glBindFramebuffer(GL_FRAMEBUFFER, comp.blur_fbo[i - 1]);
+		glViewport(0, 0, comp.blur_w[i - 1], comp.blur_h[i - 1]);
+		glBindTexture(GL_TEXTURE_2D, comp.blur_tex[i]);
+		glUniform2f(comp.blur_up_halfpixel_loc, 0.5f / (float)comp.blur_w[i], 0.5f / (float)comp.blur_h[i]);
+		draw_blur_quad();
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, comp.root_w, comp.root_h);
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+}
+
+// [=]===^=[ blur_composite ]================================[=]
+static void blur_composite(struct win *w, float radius, float opacity) {
+	float wx = (float)w->x;
+	float wy = (float)w->y;
+	float ww = (float)w->w;
+	float wh = (float)w->h;
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glUseProgram(comp.blur_composite_prog);
+	glUniform2f(comp.blur_composite_pos_loc, wx, wy);
+	glUniform2f(comp.blur_composite_size_loc, ww, wh);
+	glUniform2f(comp.blur_composite_screen_size_loc, (float)comp.root_w, (float)comp.root_h);
+	glUniform1f(comp.blur_composite_radius_loc, radius);
+	glUniform1f(comp.blur_composite_opacity_loc, opacity);
+
+	glBindTexture(GL_TEXTURE_2D, comp.blur_tex[0]);
+
+	glBegin(GL_QUADS);
+	glVertex2f(wx, wy);
+	glVertex2f(wx + ww, wy);
+	glVertex2f(wx + ww, wy + wh);
+	glVertex2f(wx, wy + wh);
+	glEnd();
+}
+
 // [=]===^=[ render ]========================================[=]
 static void render(void) {
 	if(comp.fullscreen_win) {
@@ -115,9 +194,15 @@ static void render(void) {
 		float wh = (float)w->h;
 		uint8_t active = (w->id == comp.active_win);
 
-		float effective_opacity = w->fade * (w->rule_opacity >= 0.0f ? w->rule_opacity : w->opacity);
+		float win_opacity = w->rule_opacity >= 0.0f ? w->rule_opacity : (w->opacity < 1.0f ? w->opacity : comp.default_opacity);
+		float effective_opacity = w->fade * win_opacity;
 		float radius = w->no_effects ? 0.0f : (w->rule_corner_radius >= 0.0f ? w->rule_corner_radius : comp.corner_radius);
 		uint8_t show_shadow = !w->no_effects && (w->rule_shadow < 0 || w->rule_shadow == 1);
+		uint8_t do_blur = (comp.blur_strength > 0 && !w->no_effects && (w->rule_blur < 0 || w->rule_blur == 1) && (effective_opacity < 1.0f || w->depth == 32));
+
+		if(do_blur) {
+			blur_process();
+		}
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -160,6 +245,10 @@ static void render(void) {
 			glVertex2f(wx + ww + bw, wy + wh + bw);
 			glVertex2f(wx - bw, wy + wh + bw);
 			glEnd();
+		}
+
+		if(do_blur) {
+			blur_composite(w, radius, w->fade);
 		}
 
 		float target_dim = (active || w->no_effects) ? 1.0f : comp.inactive_brightness;

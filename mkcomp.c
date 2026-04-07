@@ -28,6 +28,7 @@
 
 #define MAX_WINDOWS 4096
 #define MAX_RULES 64
+#define BLUR_MAX_LEVELS 6
 
 #ifndef GLX_TEXTURE_2D_EXT
 #define GLX_TEXTURE_2D_EXT              0x20dc
@@ -64,6 +65,7 @@ struct win {
 	float rule_opacity;
 	float rule_corner_radius;
 	int8_t rule_shadow;
+	int8_t rule_blur;
 	uint8_t damaged;
 	uint8_t needs_rebind;
 	uint8_t no_effects;
@@ -80,6 +82,7 @@ struct rule {
 	float opacity;
 	float corner_radius;
 	int8_t shadow;
+	int8_t blur;
 };
 
 struct compositor {
@@ -122,6 +125,20 @@ struct compositor {
 	int32_t border_width_loc;
 	int32_t border_color_loc;
 	int32_t border_opacity_loc;
+	uint32_t blur_down_prog;
+	int32_t blur_down_halfpixel_loc;
+	uint32_t blur_up_prog;
+	int32_t blur_up_halfpixel_loc;
+	uint32_t blur_composite_prog;
+	int32_t blur_composite_pos_loc;
+	int32_t blur_composite_size_loc;
+	int32_t blur_composite_screen_size_loc;
+	int32_t blur_composite_radius_loc;
+	int32_t blur_composite_opacity_loc;
+	uint32_t blur_fbo[BLUR_MAX_LEVELS];
+	uint32_t blur_tex[BLUR_MAX_LEVELS];
+	uint32_t blur_w[BLUR_MAX_LEVELS];
+	uint32_t blur_h[BLUR_MAX_LEVELS];
 	Window active_win;
 	Window fullscreen_win;
 	Atom atom_active_win;
@@ -148,10 +165,12 @@ struct compositor {
 	float urgent_border_color[3];
 	float border_width;
 	float corner_radius;
+	float default_opacity;
 	float inactive_brightness;
 	uint32_t focus_transition_ms;
 	uint32_t fade_in_ms;
 	uint32_t fade_out_ms;
+	uint32_t blur_strength;
 	uint64_t last_render_us;
 	struct rule rules[MAX_RULES];
 	uint32_t rule_count;
@@ -329,6 +348,23 @@ static void cleanup(void) {
 	}
 	if(comp.border_prog) {
 		glDeleteProgram(comp.border_prog);
+	}
+	if(comp.blur_down_prog) {
+		glDeleteProgram(comp.blur_down_prog);
+	}
+	if(comp.blur_up_prog) {
+		glDeleteProgram(comp.blur_up_prog);
+	}
+	if(comp.blur_composite_prog) {
+		glDeleteProgram(comp.blur_composite_prog);
+	}
+	for(uint32_t i = 0; i < BLUR_MAX_LEVELS; ++i) {
+		if(comp.blur_fbo[i]) {
+			glDeleteFramebuffers(1, &comp.blur_fbo[i]);
+		}
+		if(comp.blur_tex[i]) {
+			glDeleteTextures(1, &comp.blur_tex[i]);
+		}
 	}
 
 	if(comp.gl_ctx) {

@@ -20,10 +20,12 @@ static void load_config(void) {
 	comp.urgent_border_color[2] = 0.55f;
 	comp.border_width = 3.0f;
 	comp.corner_radius = 12.0f;
+	comp.default_opacity = 1.0f;
 	comp.inactive_brightness = 1.0f;
 	comp.focus_transition_ms = 0;
 	comp.fade_in_ms = 0;
 	comp.fade_out_ms = 0;
+	comp.blur_strength = 0;
 	comp.rule_count = 0;
 
 	char *home = getenv("HOME");
@@ -101,6 +103,9 @@ static void load_config(void) {
 		} else if(strcmp(key, "corner_radius") == 0) {
 			comp.corner_radius = strtof(val, NULL);
 
+		} else if(strcmp(key, "opacity") == 0) {
+			comp.default_opacity = strtof(val, NULL);
+
 		} else if(strcmp(key, "inactive_brightness") == 0) {
 			comp.inactive_brightness = strtof(val, NULL);
 
@@ -112,6 +117,12 @@ static void load_config(void) {
 
 		} else if(strcmp(key, "fade_out_ms") == 0) {
 			comp.fade_out_ms = (uint32_t)strtoul(val, NULL, 10);
+
+		} else if(strcmp(key, "blur_strength") == 0) {
+			comp.blur_strength = (uint32_t)strtoul(val, NULL, 10);
+			if(comp.blur_strength > BLUR_MAX_LEVELS - 1) {
+				comp.blur_strength = BLUR_MAX_LEVELS - 1;
+			}
 
 		} else if(strcmp(key, "rule") == 0) {
 			if(comp.rule_count >= MAX_RULES) {
@@ -129,6 +140,7 @@ static void load_config(void) {
 			r->opacity = -1.0f;
 			r->corner_radius = -1.0f;
 			r->shadow = -1;
+			r->blur = -1;
 			size_t class_len = (size_t)(space - val);
 			if(class_len >= sizeof(r->wm_class)) {
 				class_len = sizeof(r->wm_class) - 1;
@@ -159,6 +171,17 @@ static void load_config(void) {
 
 				} else if(strncmp(val, "corner_radius=", 14) == 0) {
 					r->corner_radius = strtof(val + 14, &val);
+
+				} else if(strncmp(val, "blur=", 5) == 0) {
+					val += 5;
+					if(strncmp(val, "off", 3) == 0) {
+						r->blur = 0;
+						val += 3;
+
+					} else if(strncmp(val, "on", 2) == 0) {
+						r->blur = 1;
+						val += 2;
+					}
 
 				} else {
 					while(*val && *val != ' ' && *val != '\t') {

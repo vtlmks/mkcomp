@@ -142,6 +142,7 @@ static void apply_rules(struct win *w) {
 	w->rule_opacity = -1.0f;
 	w->rule_corner_radius = -1.0f;
 	w->rule_shadow = -1;
+	w->rule_blur = -1;
 	if(!w->wm_class[0] && !w->wm_instance[0]) {
 		return;
 	}
@@ -155,6 +156,9 @@ static void apply_rules(struct win *w) {
 			}
 			if(comp.rules[i].shadow >= 0) {
 				w->rule_shadow = comp.rules[i].shadow;
+			}
+			if(comp.rules[i].blur >= 0) {
+				w->rule_blur = comp.rules[i].blur;
 			}
 		}
 	}

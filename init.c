@@ -188,6 +188,32 @@ static uint8_t init_glx(void) {
 
 	init_shaders();
 
+	if(comp.blur_strength > 0 && comp.blur_down_prog && comp.blur_up_prog && comp.blur_composite_prog) {
+		uint32_t bw = comp.root_w;
+		uint32_t bh = comp.root_h;
+		for(uint32_t i = 0; i < BLUR_MAX_LEVELS; ++i) {
+			if(i > 0) {
+				bw = (bw + 1) / 2;
+				bh = (bh + 1) / 2;
+			}
+			comp.blur_w[i] = bw;
+			comp.blur_h[i] = bh;
+			glGenFramebuffers(1, &comp.blur_fbo[i]);
+			glGenTextures(1, &comp.blur_tex[i]);
+			glBindTexture(GL_TEXTURE_2D, comp.blur_tex[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bw, bh, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glBindFramebuffer(GL_FRAMEBUFFER, comp.blur_fbo[i]);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, comp.blur_tex[i], 0);
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		fprintf(stderr, "mkcomp: blur enabled (strength %u)\n", comp.blur_strength);
+	}
+
 	int32_t present_event, present_error;
 	if(XPresentQueryExtension(comp.dpy, &comp.present_opcode, &present_event, &present_error)) {
 		glx_swap_interval_ext_func swap_interval = (glx_swap_interval_ext_func)glXGetProcAddress((GLubyte *)"glXSwapIntervalEXT");
