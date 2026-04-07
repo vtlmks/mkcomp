@@ -19,8 +19,10 @@ static void update_active_window(void) {
 	}
 	XFree(data);
 
-	if(find_win(active)) {
+	struct win *aw = find_win(active);
+	if(aw) {
 		comp.active_win = active;
+		aw->urgent = 0;
 		return;
 	}
 
@@ -38,6 +40,10 @@ static void update_active_window(void) {
 		}
 		if(parent == comp.root) {
 			comp.active_win = current;
+			struct win *pw = find_win(current);
+			if(pw) {
+				pw->urgent = 0;
+			}
 			return;
 		}
 		current = parent;
@@ -144,6 +150,8 @@ static void handle_property(XPropertyEvent *ev) {
 		} else if(!fs && w->fullscreen) {
 			redirect_from_fullscreen(w);
 		}
+
+		w->urgent = check_demands_attention(ev->window);
 	}
 }
 

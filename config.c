@@ -12,6 +12,9 @@ static void load_config(void) {
 	comp.border_color[0] = 0.4f;
 	comp.border_color[1] = 0.7f;
 	comp.border_color[2] = 1.0f;
+	comp.urgent_border_color[0] = 0.8f;
+	comp.urgent_border_color[1] = 0.35f;
+	comp.urgent_border_color[2] = 0.55f;
 	comp.border_width = 3.0f;
 	comp.corner_radius = 12.0f;
 	comp.dim_inactive = 0.2f;
@@ -82,6 +85,9 @@ static void load_config(void) {
 
 		} else if(strcmp(key, "border_color") == 0) {
 			sscanf(val, "%f %f %f", &comp.border_color[0], &comp.border_color[1], &comp.border_color[2]);
+
+		} else if(strcmp(key, "urgent_border_color") == 0) {
+			sscanf(val, "%f %f %f", &comp.urgent_border_color[0], &comp.urgent_border_color[1], &comp.urgent_border_color[2]);
 
 		} else if(strcmp(key, "border_width") == 0) {
 			comp.border_width = strtof(val, NULL);

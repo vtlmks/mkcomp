@@ -60,6 +60,7 @@ struct win {
 	uint8_t no_effects;
 	uint8_t fullscreen;
 	uint8_t mapped;
+	uint8_t urgent;
 };
 
 struct compositor {
@@ -112,6 +113,7 @@ struct compositor {
 	Atom atom_type_combo;
 	Atom atom_wm_state;
 	Atom atom_state_fullscreen;
+	Atom atom_state_attention;
 	float bg_color[3];
 	float bg_intensity;
 	float bg_speed;
@@ -120,6 +122,7 @@ struct compositor {
 	float shadow_offset_x;
 	float shadow_offset_y;
 	float border_color[3];
+	float urgent_border_color[3];
 	float border_width;
 	float corner_radius;
 	float dim_inactive;
@@ -315,6 +318,7 @@ int main(int32_t argc, char **argv) {
 	comp.atom_type_combo = XInternAtom(comp.dpy, "_NET_WM_WINDOW_TYPE_COMBO", False);
 	comp.atom_wm_state = XInternAtom(comp.dpy, "_NET_WM_STATE", False);
 	comp.atom_state_fullscreen = XInternAtom(comp.dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	comp.atom_state_attention = XInternAtom(comp.dpy, "_NET_WM_STATE_DEMANDS_ATTENTION", False);
 
 	XSelectInput(comp.dpy, comp.root, SubstructureNotifyMask | PropertyChangeMask);
 	XSetErrorHandler(runtime_error_handler);

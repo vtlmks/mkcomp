@@ -71,6 +71,29 @@ static void bind_texture(struct win *w) {
 	w->damaged = 0;
 }
 
+// [=]===^=[ check_demands_attention ]======================[=]
+static uint8_t check_demands_attention(Window id) {
+	Atom type;
+	int format;
+	unsigned long nitems, bytes_after;
+	unsigned char *data = NULL;
+
+	XGetWindowProperty(comp.dpy, id, comp.atom_wm_state, 0, 32, False, XA_ATOM, &type, &format, &nitems, &bytes_after, &data);
+	if(data && nitems > 0 && format == 32) {
+		Atom *atoms = (Atom *)data;
+		for(unsigned long i = 0; i < nitems; ++i) {
+			if(atoms[i] == comp.atom_state_attention) {
+				XFree(data);
+				return 1;
+			}
+		}
+	}
+	if(data) {
+		XFree(data);
+	}
+	return 0;
+}
+
 // [=]===^=[ check_fullscreen_state ]=======================[=]
 static uint8_t check_fullscreen_state(Window id) {
 	Atom type;
@@ -257,6 +280,7 @@ static void add_win(Window id) {
 	w->h = wa.height + 2 * wa.border_width;
 	w->depth = wa.depth;
 	w->no_effects = wa.override_redirect || check_skip_effects(id);
+	w->urgent = check_demands_attention(id);
 	w->dim_current = (id == comp.active_win || w->no_effects) ? 1.0f : (1.0f - comp.dim_inactive);
 
 	w->mapped = 1;

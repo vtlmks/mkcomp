@@ -103,14 +103,15 @@ static void render(void) {
 			glEnd();
 		}
 
-		if(comp.border_prog && comp.border_width > 0.0f && active && !w->no_effects) {
+		if(comp.border_prog && comp.border_width > 0.0f && (active || w->urgent) && !w->no_effects) {
 			float bw = comp.border_width;
+			float *bc = w->urgent ? comp.urgent_border_color : comp.border_color;
 
 			glUseProgram(comp.border_prog);
 			glUniform2f(comp.border_pos_loc, wx - bw, wy - bw);
 			glUniform2f(comp.border_size_loc, ww + 2.0f * bw, wh + 2.0f * bw);
 			glUniform1f(comp.border_radius_loc, comp.corner_radius + bw);
-			glUniform3f(comp.border_color_loc, comp.border_color[0], comp.border_color[1], comp.border_color[2]);
+			glUniform3f(comp.border_color_loc, bc[0], bc[1], bc[2]);
 
 			glBegin(GL_QUADS);
 			glVertex2f(wx - bw, wy - bw);
