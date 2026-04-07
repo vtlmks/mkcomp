@@ -76,6 +76,8 @@ static void blur_composite(struct win *w, float radius, float opacity) {
 	glUniform2f(comp.blur_composite_screen_size_loc, (float)comp.root_w, (float)comp.root_h);
 	glUniform1f(comp.blur_composite_radius_loc, radius);
 	glUniform1f(comp.blur_composite_opacity_loc, opacity);
+	glUniform1f(comp.blur_composite_desaturate_loc, comp.blur_desaturate);
+	glUniform1f(comp.blur_composite_darken_loc, comp.blur_darken);
 
 	glBindTexture(GL_TEXTURE_2D, comp.blur_tex[0]);
 

@@ -265,6 +265,8 @@ static char blur_composite_frag_src[] =
 	"uniform vec2 u_screen_size;\n"
 	"uniform float u_radius;\n"
 	"uniform float u_opacity;\n"
+	"uniform float u_desaturate;\n"
+	"uniform float u_darken;\n"
 	"varying vec2 v_pos;\n"
 	"\n"
 	"float rounded_rect(vec2 p, vec2 half_size, float r) {\n"
@@ -275,6 +277,9 @@ static char blur_composite_frag_src[] =
 	"void main() {\n"
 	"	vec2 screen_uv = gl_FragCoord.xy / u_screen_size;\n"
 	"	vec3 color = texture2D(u_tex, screen_uv).rgb;\n"
+	"	float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));\n"
+	"	color = mix(color, vec3(lum), u_desaturate);\n"
+	"	color *= 1.0 - u_darken;\n"
 	"	vec2 half_size = u_size * 0.5;\n"
 	"	float r = min(u_radius, min(half_size.x, half_size.y));\n"
 	"	vec2 center = u_pos + half_size;\n"
@@ -416,5 +421,7 @@ static void init_shaders(void) {
 		comp.blur_composite_screen_size_loc = glGetUniformLocation(comp.blur_composite_prog, "u_screen_size");
 		comp.blur_composite_radius_loc = glGetUniformLocation(comp.blur_composite_prog, "u_radius");
 		comp.blur_composite_opacity_loc = glGetUniformLocation(comp.blur_composite_prog, "u_opacity");
+		comp.blur_composite_desaturate_loc = glGetUniformLocation(comp.blur_composite_prog, "u_desaturate");
+		comp.blur_composite_darken_loc = glGetUniformLocation(comp.blur_composite_prog, "u_darken");
 	}
 }

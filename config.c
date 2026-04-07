@@ -143,6 +143,24 @@ static void load_config(void) {
 				comp.blur_strength = BLUR_MAX_LEVELS - 1;
 			}
 
+		} else if(strcmp(key, "blur_desaturate") == 0) {
+			comp.blur_desaturate = strtof(val, NULL);
+			if(comp.blur_desaturate < 0.0f) {
+				comp.blur_desaturate = 0.0f;
+			}
+			if(comp.blur_desaturate > 1.0f) {
+				comp.blur_desaturate = 1.0f;
+			}
+
+		} else if(strcmp(key, "blur_darken") == 0) {
+			comp.blur_darken = strtof(val, NULL);
+			if(comp.blur_darken < 0.0f) {
+				comp.blur_darken = 0.0f;
+			}
+			if(comp.blur_darken > 1.0f) {
+				comp.blur_darken = 1.0f;
+			}
+
 		} else if(strcmp(key, "rule") == 0) {
 			if(comp.rule_count >= MAX_RULES) {
 				continue;

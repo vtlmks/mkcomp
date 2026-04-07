@@ -144,6 +144,8 @@ struct compositor {
 	int32_t blur_composite_screen_size_loc;
 	int32_t blur_composite_radius_loc;
 	int32_t blur_composite_opacity_loc;
+	int32_t blur_composite_desaturate_loc;
+	int32_t blur_composite_darken_loc;
 	uint32_t blur_fbo[BLUR_MAX_LEVELS];
 	uint32_t blur_tex[BLUR_MAX_LEVELS];
 	uint32_t blur_w[BLUR_MAX_LEVELS];
@@ -186,6 +188,8 @@ struct compositor {
 	uint32_t fade_in_ms;
 	uint32_t fade_out_ms;
 	uint32_t blur_strength;
+	float blur_desaturate;
+	float blur_darken;
 	uint64_t last_render_us;
 	struct rule rules[MAX_RULES];
 	uint32_t rule_count;

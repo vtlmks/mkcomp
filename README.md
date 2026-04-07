@@ -102,6 +102,8 @@ When `bg_intensity` is 0, mkcomp shows your wallpaper by reading the root window
 | `fade_in_ms` | `0` | Window appear animation duration in ms |
 | `fade_out_ms` | `0` | Window close animation duration in ms |
 | `blur_strength` | `0` | Background blur passes (0 = off, 1-5 = weak to strong) |
+| `blur_desaturate` | `0` | Desaturate blurred background (0.0 = full color, 1.0 = grayscale) |
+| `blur_darken` | `0` | Darken blurred background (0.0 = original brightness, 1.0 = black) |
 
 ### Per-window rules
 
@@ -147,6 +149,8 @@ focus_transition_ms = 100
 corner_radius = 6
 inactive_brightness = 0.8
 blur_strength = 3
+blur_desaturate = 0.3
+blur_darken = 0.2
 
 # rules
 rule = class:Alacritty blur=on
