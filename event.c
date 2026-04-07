@@ -1,3 +1,6 @@
+// Copyright (c) 2026 vital
+// SPDX-License-Identifier: MIT
+
 // [=]===^=[ update_active_window ]=========================[=]
 static void update_active_window(void) {
 	Atom type;

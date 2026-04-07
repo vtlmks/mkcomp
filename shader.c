@@ -1,3 +1,6 @@
+// Copyright (c) 2026 vital
+// SPDX-License-Identifier: MIT
+
 static char bg_vert_src[] =
 	"#version 120\n"
 	"void main() {\n"

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 vital
+// SPDX-License-Identifier: MIT
+
 // [=]===^=[ find_tex_fbconfig ]=============================[=]
 static GLXFBConfig find_tex_fbconfig(uint32_t depth, uint8_t rgba) {
 	int32_t nconfigs;

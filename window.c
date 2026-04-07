@@ -1,3 +1,6 @@
+// Copyright (c) 2026 vital
+// SPDX-License-Identifier: MIT
+
 // [=]===^=[ find_win ]======================================[=]
 static struct win *find_win(Window id) {
 	for(uint32_t i = 0; i < comp.win_count; ++i) {

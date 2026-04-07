@@ -1,3 +1,6 @@
+// Copyright (c) 2026 vital
+// SPDX-License-Identifier: MIT
+
 // [=]===^=[ load_config ]===================================[=]
 static void load_config(void) {
 	comp.bg_color[0] = 1.0f;

@@ -1,3 +1,6 @@
+// Copyright (c) 2026 vital
+// SPDX-License-Identifier: MIT
+
 // [=]===^=[ get_time_us ]===================================[=]
 static uint64_t get_time_us(void) {
 	struct timespec ts;
