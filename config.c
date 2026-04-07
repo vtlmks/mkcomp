@@ -34,7 +34,7 @@ static void load_config(void) {
 	}
 
 	char path[512];
-	snprintf(path, sizeof(path), "%s/.config/mkcomp/config", home);
+	snprintf(path, sizeof(path), "%s/.config/mkcomp/mkcomp.conf", home);
 
 	FILE *fp = fopen(path, "r");
 	if(!fp) {

@@ -46,7 +46,7 @@ Copy the example config and edit to taste:
 
 ```
 mkdir -p ~/.config/mkcomp
-cp mkcomp.conf ~/.config/mkcomp/config
+cp mkcomp.conf ~/.config/mkcomp/
 ```
 
 mkcomp works without a config file (sensible defaults), but most users will want to tweak at least shadows and corner radius. Changes are picked up automatically via inotify, or send `SIGHUP` to reload.
@@ -55,7 +55,7 @@ To stop, send `SIGINT` or `SIGTERM`.
 
 ## Configuration
 
-Create `~/.config/mkcomp/config` with key-value pairs. Lines starting with `#` are comments.
+Create `~/.config/mkcomp/mkcomp.conf` with key-value pairs. Lines starting with `#` are comments.
 
 ### Background
 
