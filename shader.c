@@ -206,6 +206,8 @@ static char blur_composite_frag_src[] =
 	"	vec2 center = u_pos + half_size;\n"
 	"	float d = rounded_rect(v_pos - center, half_size, r);\n"
 	"	if(d > 0.5) discard;\n"
+	"	float dither = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;\n"
+	"	color += dither;\n"
 	"	float a = (1.0 - smoothstep(-1.0, 0.5, d)) * u_opacity;\n"
 	"	gl_FragColor = vec4(color * a, a);\n"
 	"}\n";
