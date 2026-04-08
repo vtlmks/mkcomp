@@ -205,6 +205,11 @@ struct compositor {
 	uint8_t has_present;
 	uint8_t vblank_pending;
 	uint8_t vblank_ready;
+	uint8_t vblank_stalled;
+	uint32_t vblank_fast_count;
+	uint64_t last_vblank_us;
+	uint64_t vblank_interval_us;
+	uint32_t vblank_calibration;
 };
 
 static struct compositor comp;
@@ -279,14 +284,17 @@ static void run(void) {
 		uint8_t bg_animated = (!comp.fullscreen_win && (comp.bg_prog || comp.bg_warp_prog) && comp.bg_intensity > 0.0f && comp.bg_speed > 0.0f);
 		uint8_t need_frame = (comp.dirty || bg_animated) && !comp.fullscreen_win;
 
-		if(comp.has_present && need_frame) {
+		if(comp.has_present && need_frame && !comp.vblank_stalled) {
 			schedule_vblank();
 		}
 
 		if(!XPending(comp.dpy)) {
 			if(comp.has_present || !need_frame) {
 				XFlush(comp.dpy);
-				poll(fds, nfds, -1);
+				poll(fds, nfds, comp.vblank_stalled ? 1000 : -1);
+				if(comp.vblank_stalled) {
+					schedule_vblank();
+				}
 			}
 		}
 
