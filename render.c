@@ -105,8 +105,13 @@ static void render(void) {
 			continue;
 		}
 		if(w->needs_rebind) {
+			unbind_texture(w);
 			bind_texture(w);
 			w->needs_rebind = 0;
+
+		} else if(w->resize_pending && w->damaged) {
+			w->needs_rebind = 1;
+			w->resize_pending = 0;
 		}
 		w->damaged = 0;
 	}

@@ -118,8 +118,7 @@ static void handle_configure(XConfigureEvent *ev) {
 	w->h = new_h;
 
 	if(resized) {
-		unbind_texture(w);
-		w->needs_rebind = 1;
+		w->resize_pending = 1;
 	}
 }
 

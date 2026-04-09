@@ -69,6 +69,7 @@ struct win {
 	int8_t rule_border;
 	uint8_t damaged;
 	uint8_t needs_rebind;
+	uint8_t resize_pending;
 	uint8_t no_effects;
 	uint8_t fullscreen;
 	uint8_t mapped;
