@@ -102,6 +102,7 @@ When `bg_intensity` is 0, mkcomp shows your wallpaper by reading the root window
 | `fade_in_ms` | `0` | Window appear animation duration in ms |
 | `fade_out_ms` | `0` | Window close animation duration in ms |
 | `blur_strength` | `0` | Background blur passes (0 = off, 1-5 = weak to strong) |
+| `blur_spread` | `1.0` | Blur kernel spread multiplier (0.5-10.0, higher = wider blur per pass) |
 | `blur_desaturate` | `0` | Desaturate blurred background (0.0 = full color, 1.0 = grayscale) |
 | `blur_darken` | `0` | Darken blurred background (0.0 = original brightness, 1.0 = black) |
 

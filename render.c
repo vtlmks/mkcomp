@@ -39,7 +39,7 @@ static void blur_process(void) {
 		glBindFramebuffer(GL_FRAMEBUFFER, comp.blur_fbo[i + 1]);
 		glViewport(0, 0, comp.blur_w[i + 1], comp.blur_h[i + 1]);
 		glBindTexture(GL_TEXTURE_2D, comp.blur_tex[i]);
-		glUniform2f(comp.blur_down_halfpixel_loc, 0.5f / (float)comp.blur_w[i], 0.5f / (float)comp.blur_h[i]);
+		glUniform2f(comp.blur_down_halfpixel_loc, comp.blur_spread * 0.5f / (float)comp.blur_w[i], comp.blur_spread * 0.5f / (float)comp.blur_h[i]);
 		draw_blur_quad();
 	}
 
@@ -48,7 +48,7 @@ static void blur_process(void) {
 		glBindFramebuffer(GL_FRAMEBUFFER, comp.blur_fbo[i - 1]);
 		glViewport(0, 0, comp.blur_w[i - 1], comp.blur_h[i - 1]);
 		glBindTexture(GL_TEXTURE_2D, comp.blur_tex[i]);
-		glUniform2f(comp.blur_up_halfpixel_loc, 0.5f / (float)comp.blur_w[i], 0.5f / (float)comp.blur_h[i]);
+		glUniform2f(comp.blur_up_halfpixel_loc, comp.blur_spread * 0.5f / (float)comp.blur_w[i], comp.blur_spread * 0.5f / (float)comp.blur_h[i]);
 		draw_blur_quad();
 	}
 

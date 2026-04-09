@@ -189,6 +189,7 @@ struct compositor {
 	uint32_t fade_in_ms;
 	uint32_t fade_out_ms;
 	uint32_t blur_strength;
+	float blur_spread;
 	float blur_desaturate;
 	float blur_darken;
 	uint64_t last_render_us;

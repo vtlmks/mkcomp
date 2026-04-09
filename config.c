@@ -30,6 +30,7 @@ static void load_config(void) {
 	comp.fade_in_ms = 0;
 	comp.fade_out_ms = 0;
 	comp.blur_strength = 0;
+	comp.blur_spread = 1.0f;
 	comp.rule_count = 0;
 
 	char *home = getenv("HOME");
@@ -141,6 +142,15 @@ static void load_config(void) {
 			comp.blur_strength = (uint32_t)strtoul(val, NULL, 10);
 			if(comp.blur_strength > BLUR_MAX_LEVELS - 1) {
 				comp.blur_strength = BLUR_MAX_LEVELS - 1;
+			}
+
+		} else if(strcmp(key, "blur_spread") == 0) {
+			comp.blur_spread = strtof(val, NULL);
+			if(comp.blur_spread < 0.5f) {
+				comp.blur_spread = 0.5f;
+			}
+			if(comp.blur_spread > 10.0f) {
+				comp.blur_spread = 10.0f;
 			}
 
 		} else if(strcmp(key, "blur_desaturate") == 0) {
