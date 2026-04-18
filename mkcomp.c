@@ -209,7 +209,7 @@ struct compositor {
 	uint8_t vblank_ready;
 	uint8_t vblank_stalled;
 	uint32_t vblank_fast_count;
-	uint64_t last_vblank_us;
+	uint64_t last_vblank_ust;
 	uint64_t vblank_interval_us;
 	uint32_t vblank_calibration;
 };

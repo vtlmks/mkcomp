@@ -186,40 +186,43 @@ static void handle_event(XEvent *ev) {
 		if(cookie->extension == comp.present_opcode && XGetEventData(comp.dpy, cookie)) {
 			if(cookie->evtype == PresentCompleteNotify) {
 				XPresentCompleteNotifyEvent *ce = cookie->data;
-				uint64_t now = get_time_us();
-				uint64_t delta = comp.last_vblank_us ? now - comp.last_vblank_us : 0;
-				comp.last_vblank_us = now;
+				// NOTE(peter): derive interval from Present's ust/msc so it reflects scanout timing,
+				// not our render-loop period. wall-clock delta between notifications is meaningless
+				// when rendering and event processing run between them.
+				uint64_t msc_delta = (comp.last_msc && ce->msc > comp.last_msc) ? ce->msc - comp.last_msc : 0;
+				uint64_t ust_delta = (comp.last_vblank_ust && ce->ust > comp.last_vblank_ust) ? ce->ust - comp.last_vblank_ust : 0;
+				uint64_t interval = (msc_delta && ust_delta) ? ust_delta / msc_delta : 0;
+				comp.last_vblank_ust = ce->ust;
 				comp.last_msc = ce->msc;
 				comp.vblank_pending = 0;
-				if(comp.vblank_calibration < 8) {
-					if(delta > 500 && delta < 100000) {
-						comp.vblank_interval_us += delta;
+				if(comp.vblank_calibration < 4) {
+					if(interval > 500 && interval < 100000) {
+						comp.vblank_interval_us += interval;
 						++comp.vblank_calibration;
-						if(comp.vblank_calibration == 8) {
-							comp.vblank_interval_us /= 8;
+						if(comp.vblank_calibration == 4) {
+							comp.vblank_interval_us /= 4;
 							fprintf(stderr, "mkcomp: vblank interval %llu us (%.0f Hz)\n", (unsigned long long)comp.vblank_interval_us, 1000000.0 / (double)comp.vblank_interval_us);
 						}
 					}
 					comp.vblank_ready = 1;
 				} else if(comp.vblank_stalled) {
-					if(delta > comp.vblank_interval_us * 2) {
-						// NOTE(peter): probe response after long idle gap; delta is meaningless.
-						// schedule a follow-up to measure the real current rate.
-						XPresentNotifyMSC(comp.dpy, comp.root, ++comp.present_serial, comp.last_msc + 1, 0, 0);
-						comp.vblank_pending = 1;
-					} else if(delta >= comp.vblank_interval_us / 2) {
+					if(interval > 0 && interval < comp.vblank_interval_us * 3 / 2) {
 						fprintf(stderr, "mkcomp: display on, resuming render\n");
 						comp.vblank_stalled = 0;
 						comp.vblank_fast_count = 0;
 						comp.dirty = 1;
 						comp.vblank_ready = 1;
+					} else {
+						XPresentNotifyMSC(comp.dpy, comp.root, ++comp.present_serial, comp.last_msc + 1, 0, 0);
+						comp.vblank_pending = 1;
 					}
-				} else if(delta && delta < comp.vblank_interval_us / 2) {
+				} else if(interval > 0 && interval < comp.vblank_interval_us / 2) {
 					++comp.vblank_fast_count;
 					if(comp.vblank_fast_count >= 5) {
 						fprintf(stderr, "mkcomp: display off, pausing render\n");
 						comp.vblank_stalled = 1;
 					}
+					comp.vblank_ready = 1;
 				} else {
 					comp.vblank_fast_count = 0;
 					comp.vblank_ready = 1;
