@@ -170,6 +170,17 @@ For the best result with terminals, use the terminal's own background transparen
 
 Blur can be controlled per-window with `blur=on` or `blur=off` in rules.
 
+### Tuning the blur
+
+Four settings control the look of the blurred background seen through transparent windows:
+
+- `blur_strength` (0-5): how many dual-kawase passes to run. Each pass roughly doubles the effective radius, so 1 is a light frosting and 5 is heavy bokeh. 0 disables blur entirely.
+- `blur_spread` (0.5-10.0): per-pass kernel offset multiplier. Higher values widen each pass without adding more passes, which is cheaper than raising `blur_strength` but introduces more banding at extreme values. Use this to reach a larger radius when `blur_strength` alone is not enough.
+- `blur_desaturate` (0.0-1.0): pulls the blurred pixels toward grayscale. 0 keeps the original colors of whatever is behind the window, 1 turns the background fully monochrome. Useful when the wallpaper or window underneath is colorful enough to fight with the foreground text.
+- `blur_darken` (0.0-1.0): multiplies the blurred result toward black. 0 preserves the original brightness, 1 produces a solid black tint. Combined with a mildly transparent window this gives a "smoked glass" look and improves contrast for light-on-dark UIs.
+
+`blur_desaturate` and `blur_darken` are applied after the blur passes, so they are essentially free and can be tweaked live via the config hot-reload.
+
 ## GNOME/GTK applications
 
 Firefox and other GTK applications detect they are running under a compositor and render their own client-side shadows and borders. This is designed for GNOME's Mutter compositor and causes problems on every other compositor: double shadows, thick borders around windows, and other visual garbage. Disable compositor effects for these windows with rules:
